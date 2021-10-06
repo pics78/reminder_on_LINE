@@ -1,7 +1,7 @@
 import { Client, ClientConfig , middleware, MiddlewareConfig, WebhookEvent, TextMessage, MessageAPIResponseBase, SignatureValidationFailed } from '@line/bot-sdk';
 import { Express, Request, Response } from 'express';
-import { resolve } from 'path/posix';
-import { Pool, PoolClient, QueryResult, QueryResultBase } from 'pg';
+import { Pool, PoolClient, QueryResult } from 'pg';
+import  Redis from 'ioredis';
 
 const clientConfig: ClientConfig = {
     channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN || '',
@@ -14,6 +14,13 @@ const middlewareConfig: MiddlewareConfig = {
 };
 
 const client = new Client(clientConfig);
+
+const redis: Redis.Redis = new Redis({
+    host:       process.env.REDIS_HOST,
+    port:       process.env.REDIS_PORT,
+    family:     process.env.REDIS_FAMILY,
+    password:   process.env.REDIS_PASS
+});
 
 const pool: Pool = new Pool({
     host:       process.env.POSTGRESQL_HOST,

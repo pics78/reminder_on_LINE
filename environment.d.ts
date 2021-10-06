@@ -8,6 +8,10 @@ declare global {
             POSTGRESQL_PASS:        string;
             LINE_CHANNEL_ACCESS_TOKEN: string;
             LINE_CHANNEL_SECRET:    string;
+            REDIS_HOST:             string;
+            REDIS_PORT:             number;
+            REDIS_FAMILY:           number;
+            REDIS_PASS:             string;
         }
     }
 }
