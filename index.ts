@@ -56,9 +56,19 @@ const pgConnectTest = async (query: string, callback: (err: Error, testResult: s
 };
 
 const textEventHandler = async (event: WebhookEvent): Promise<MessageAPIResponseBase | undefined> => {
-    if (event.type !== 'message' || event.message.type !== 'text') {
+    if (event.type !== 'message' || event.message.type !== 'text' || event.source.userId == undefined) {
         return;
     }
+    
+    const userId: string = event.source.userId;
+    redis.set(`${userId}_status`, 'first');
+    redis.get(`${userId}_status`)
+        .then(val => {
+            console.log(val);
+        })
+        .catch(err => {
+            console.error(err);
+        });
     
     pgConnectTest('select * from reminders', (err: Error, testResult: string) => {
         if (err) {
