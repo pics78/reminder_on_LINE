@@ -1,24 +1,20 @@
 import { Client, ClientConfig, middleware, MiddlewareConfig, MessageAPIResponseBase } from '@line/bot-sdk';
-import { Middleware } from '@line/bot-sdk/dist/middleware';
-import moment, { Moment } from 'moment';
-import { getRemindMomentJustAfter, getRemindMomentJustBefore, formatted } from '../utils/momentUtil'
+import { getRemindMomentJustAfter, formatted } from '../utils/momentUtil'
+import moment from 'moment';
 
 export interface LINEConfig extends ClientConfig, MiddlewareConfig {
     channelAccessToken: string;
     channelSecret: string;
 }
 
+export const lineMiddleware = (config: LINEConfig) => {
+    return middleware(config);
+}
+
 export class LINEService {
     private client: Client;
-    private middleware: Middleware;
-
     constructor(config: LINEConfig) {
         this.client = new Client(config);
-        this.middleware = middleware(config);
-    }
-
-    public get getMiddleware() {
-        return this.middleware;
     }
 
     public replyText = async (token: string, text: string): Promise<MessageAPIResponseBase> => {
@@ -50,3 +46,12 @@ export class LINEService {
         });
     }
 }
+
+
+// TODO
+// クイックリプライ機能を使って登録中に入力した内容などを戻って変更できるようにする
+// https://developers.line.biz/ja/docs/messaging-api/using-quick-reply/#set-quick-reply-buttons
+
+// 日時選択状態時にクイックリプライの内容編集を押すともう一度内容を入力できる
+// 内容入力または日時選択状態時にクイックリプライの取り消しを押すとリマインド登録状態をキャンセルできる
+// など

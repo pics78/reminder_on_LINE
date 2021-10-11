@@ -1,7 +1,7 @@
-import { WebhookEvent, MessageAPIResponseBase } from '@line/bot-sdk';
 import { Express, Request, Response } from 'express';
 import { ClientConfig } from 'pg';
-import { LINEService, LINEConfig, StoreConfig } from './services';
+import { LINEConfig, lineMiddleware } from './services/lineConnectService';
+import { StoreConfig } from './services/statusService';
 import { EventHandler, WebhookEventForReminder } from './events';
 
 const storeConfig: StoreConfig = {
@@ -26,14 +26,13 @@ const eventHandler: EventHandler = new EventHandler(
     storeConfig, dbConfig, lineConfig
 );
 
-const line: LINEService = new LINEService(lineConfig);
 const app: Express = require('express')();
 
 app.get('/', (_req: Request, res: Response) => {
     res.send(JSON.stringify({'status': 'OK'}));
 });
 
-app.post('/webhook', line.getMiddleware, async (req: Request, res: Response) => {
+app.post('/webhook', lineMiddleware(lineConfig), async (req: Request, res: Response) => {
     const events: WebhookEventForReminder[] = req.body.events;
 
     await Promise.all(

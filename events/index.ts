@@ -1,6 +1,6 @@
 import { ClientConfig } from 'pg';
-import { LINEConfig, StoreConfig } from '../services';
-
+import { LINEConfig } from '../services/lineConnectService';
+import { StoreConfig } from '../services/statusService';
 import { MessageEventForReminder, MessageEventHandler } from './message';
 import { PostbackEventForReminder, PostbackEventHandler } from './postback';
 

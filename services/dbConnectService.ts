@@ -1,4 +1,3 @@
-import { rejects } from 'assert';
 import { Pool, PoolClient, ClientConfig, QueryResult } from 'pg';
 import { tn, tc, ReminderRow, QueryString } from './sql'
 
@@ -19,18 +18,14 @@ export class ReminderDBService {
         this.pool = new Pool(config);
     }
 
-    private run = async (query: string, values: any[]): Promise<QueryResult> => {
+    public run = async (query: string, values: any[]): Promise<QueryResult> => {
         return new Promise(resolve => {
             this.pool.connect((connectError: Error, poolClient: PoolClient) => {
-                if (connectError) {
-                    console.error(connectError);
-                    throw connectError;
-                } else {
+                if (connectError) throw connectError;
+                else {
                     poolClient.query(query, values, (queryError: Error, queryResult: QueryResult<any>) => {
-                        if (queryError) {
-                            console.error(queryError);
-                            throw queryError;
-                        } else {
+                        if (queryError) throw queryError;
+                        else {
                             resolve(queryResult);
                         }
                     });
@@ -52,23 +47,10 @@ export class ReminderDBService {
                     });
                 });
                 return result;
-            })
-            .catch(e => {
-                console.log(e);
-                throw e;
             });
     }
 
-    public insert = async (usr: string, cnt: string, rdt: string): Promise<void> => {
-        return await this.run(sql.insert, [usr, cnt, rdt])
-            .then(qr => {
-                if (qr.rowCount == 1) {
-                    console.log('inserted a record.');
-                }
-            })
-            .catch(e => {
-                console.log(e);
-                throw e;
-            });
+    public insert = async (usr: string, cnt: string, rdt: string): Promise<QueryResult> => {
+        return await this.run(sql.insert, [usr, cnt, rdt]);
     }
 }

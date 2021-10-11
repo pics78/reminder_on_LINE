@@ -1,9 +1,12 @@
 import { ReminderEventBase } from './base';
-import { LINE_REQUEST_ID_HTTP_HEADER_NAME, MessageAPIResponseBase } from '@line/bot-sdk';
+import { LINE_REQUEST_ID_HTTP_HEADER_NAME } from '@line/bot-sdk';
 import { ClientConfig } from 'pg';
-import {ReminderDBService, LINEService, LINEConfig, StatusMgr, StatusDef, StoreConfig } from '../services';
+import { LINEService, LINEConfig } from '../services/lineConnectService';
+import { ReminderDBService } from '../services/dbConnectService';
+import { StatusMgr, StatusDef, StoreConfig } from '../services/statusService';
 import moment, { Moment } from 'moment';
 import { getRemindMomentJustAfter, getRemindMomentJustBefore, formatted } from '../utils/momentUtil'
+import { ReminderErrorHandler, ErrorType } from './error';
 
 export declare type PostbackEventForReminder = {
     type: 'postback';
@@ -19,18 +22,21 @@ export class PostbackEventHandler {
     private statusMgr: StatusMgr;
     private db: ReminderDBService;
     private line: LINEService;
+    private errHandler: ReminderErrorHandler;
     constructor(storeConfig: StoreConfig, dbConfig: ClientConfig, lineConfig: LINEConfig) {
         this.statusMgr = new StatusMgr(storeConfig);
         this.db = new ReminderDBService(dbConfig);
         this.line = new LINEService(lineConfig);
+        this.errHandler = new ReminderErrorHandler(lineConfig);
     }
 
     public datetimeReturned = async (event: PostbackEventForReminder): Promise<'OK'|'NG'> => {
         // リマインド日時取得 -> リマインド登録処理
+        let token: string = event.replyToken;
         let userId: string = event.source.userId;
         let status: string = await this.statusMgr.getStatus(userId);
         if (status !== StatusDef.settingDatetime) {
-            console.error(`unexpected status: ${status}, expected: ${StatusDef.settingDatetime}`);
+            this.errHandler.handleError(ErrorType.unexpectedStatus, token, userId, status, StatusDef.settingDatetime);
             return 'NG';
         }
         console.log(JSON.stringify(event));

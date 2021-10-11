@@ -1,7 +1,7 @@
 
 import Redis from 'ioredis';
 
-type Status =
+declare type Status =
     'none' | 'setting_content' | 'setting_datetime' | 'modify_content' | 'modify_datetime';
 
 export class StatusDef {

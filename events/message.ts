@@ -1,7 +1,10 @@
 import { ReminderEventBase } from './base';
-import { LINE_REQUEST_ID_HTTP_HEADER_NAME, MessageAPIResponseBase } from '@line/bot-sdk';
+import { LINE_REQUEST_ID_HTTP_HEADER_NAME } from '@line/bot-sdk';
 import { ClientConfig } from 'pg';
-import {ReminderDBService, LINEService, LINEConfig, StatusMgr, StatusDef, StoreConfig } from '../services';
+import { LINEService, LINEConfig } from '../services/lineConnectService';
+import { ReminderDBService } from '../services/dbConnectService';
+import { StatusMgr, StatusDef, StoreConfig } from '../services/statusService';
+import { ReminderErrorHandler, ErrorType } from './error';
 
 export declare type MessageEventForReminder = {
     type: 'message';
@@ -15,21 +18,24 @@ export class MessageEventHandler {
     private statusMgr: StatusMgr;
     private db: ReminderDBService;
     private line: LINEService;
+    private errHandler: ReminderErrorHandler;
     constructor(storeConfig: StoreConfig, dbConfig: ClientConfig, lineConfig: LINEConfig) {
         this.statusMgr = new StatusMgr(storeConfig);
         this.db = new ReminderDBService(dbConfig);
         this.line = new LINEService(lineConfig);
+        this.errHandler = new ReminderErrorHandler(lineConfig);
     }
 
     // リマインダー登録開始処理 -> リマインド内容入力状態へ遷移
     public startRegist = async (event: MessageEventForReminder): Promise<'OK'|'NG'> => {
+        let token: string = event.replyToken;
         let userId: string = event.source.userId;
         let status: string = await this.statusMgr.getStatus(userId);
         // 【ステータス確認】
         // パターン1: 初めて登録する  -> そのユーザに対応するレコードが存在しない場合
         // パターン2: 2回目以降の登録 -> ステータスが`StatusDef.none`になっている場合
         if (status && status !== StatusDef.none) {
-            console.error(`unexpected status: ${status}, expected: ${StatusDef.none}`);
+            this.errHandler.handleError(ErrorType.unexpectedStatus, token, userId, status, `${StatusDef.none}|undefined`);
             return 'NG';
         }
         return await this.line.replyText(event.replyToken, '登録処理を開始します。\nリマインド内容を送信してください。')
@@ -38,12 +44,13 @@ export class MessageEventHandler {
 
     // リマインド内容保持 -> リマインド日時選択状態へ遷移
     public contentReturned = async (event: MessageEventForReminder): Promise<'OK'|'NG'> => {
+        let token: string = event.replyToken;
         let userId: string = event.source.userId;
         let status: string = await this.statusMgr.getStatus(userId);
         // 【ステータス確認】
         // パターン1: ステータスが`StatusDef.settingContent`になっている場合
         if (status !== StatusDef.settingContent) {
-            console.error(`unexpected status: ${status}, expected: ${StatusDef.settingContent}`);
+            this.errHandler.handleError(ErrorType.unexpectedStatus, token, userId, status, StatusDef.settingContent);
             return 'NG';
         }
         let content: string = event.message.text;
