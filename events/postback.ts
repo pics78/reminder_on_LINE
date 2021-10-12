@@ -1,22 +1,12 @@
-import { ReminderEventBase } from './base';
+import { PostbackEventForReminder, WebhookEventForReminder } from './def/types';
 import { LINE_REQUEST_ID_HTTP_HEADER_NAME } from '@line/bot-sdk';
 import { ClientConfig } from 'pg';
 import { LINEService, LINEConfig } from '../services/lineConnectService';
 import { ReminderDBService } from '../services/dbConnectService';
-import { StatusMgr, StatusDef, StoreConfig } from '../services/statusService';
+import { StatusMgr, StatusDef, Status, StoreConfig } from '../services/statusService';
 import moment, { Moment } from 'moment';
 import { getRemindMomentJustAfter, getRemindMomentJustBefore, formatted } from '../utils/momentUtil'
 import { ReminderErrorHandler, ErrorType } from './error';
-
-export declare type PostbackEventForReminder = {
-    type: 'postback';
-    postback: {
-        data: string;
-        params: {
-            datetime: string;
-        }
-    }
-} & ReminderEventBase;
 
 export class PostbackEventHandler {
     private statusMgr: StatusMgr;
@@ -30,16 +20,10 @@ export class PostbackEventHandler {
         this.errHandler = new ReminderErrorHandler(lineConfig);
     }
 
-    public datetimeReturned = async (event: PostbackEventForReminder): Promise<'OK'|'NG'> => {
+    public datetimeReturned = async (event: PostbackEventForReminder): Promise<Boolean> => {
         // リマインド日時取得 -> リマインド登録処理
         let token: string = event.replyToken;
         let userId: string = event.source.userId;
-        let status: string = await this.statusMgr.getStatus(userId);
-        if (status !== StatusDef.settingDatetime) {
-            this.errHandler.handleError(ErrorType.unexpectedStatus, token, userId, status, StatusDef.settingDatetime);
-            return 'NG';
-        }
-        console.log(JSON.stringify(event));
         let selectedMoment: Moment = getRemindMomentJustBefore(moment(event.postback.params.datetime));
         let nextRemindMoment: Moment = getRemindMomentJustAfter(moment());
         if (selectedMoment.isSameOrAfter(nextRemindMoment)) {
@@ -47,35 +31,69 @@ export class PostbackEventHandler {
             let remindDatetime: string = formatted(selectedMoment);
             return await this.db
                 .insert(userId, remindContent, remindDatetime)
-                .then(() => this.statusMgr.reset(userId))
-                .then(() => this.line.replyText(event.replyToken, `登録完了\n【内容】\n${remindContent}\n【日時】\n${remindDatetime}`))
+                .then(() => this.statusMgr.reset(userId, true))
+                .then(() => this.line.replyText(token, `登録完了\n【内容】\n${remindContent}\n【日時】\n${remindDatetime}`))
                 .then(r => {
                     if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
-                        return 'OK';
+                        return true;
                     } else {
-                        return 'NG';
+                        return false;
                     }
                 })
                 .catch(e => {
                     console.error(e);
-                    return 'NG';
+                    return false;
                 });
         } else {
             // invalid datetime
             // retry DatetimePicker
-            return await this.line.replyDatetimePicker(event.replyToken)
+            return await this.line.replyDatetimePicker(token)
                 .then(r => {
                     if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
-                        return 'OK';
+                        return true;
                     } else {
-                        return 'NG';
+                        return false;
                     }
                 })
                 .catch(e => {
                     console.error(e);
-                    return 'NG';
+                    return false;
                 });
         }
     }
+
+    public cancelReturned = async (event: PostbackEventForReminder): Promise<Boolean> => {
+        let token: string = event.replyToken;
+        let userId: string = event.source.userId;
+        let status: Status|null = await this.statusMgr.getStatus(userId);
+        let savedContentFlg = status === StatusDef.settingDatetime;
+        return await this.statusMgr.reset(userId, savedContentFlg)
+            .then(() => this.line.replyText(token, '中断しました。')
+            )
+            .then(r => {
+                if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
+                    return true;
+                } else {
+                    return false;
+                }
+            });
+    }
+
+    public backToContentReturned = async (event: PostbackEventForReminder): Promise<Boolean> => {
+        let token: string = event.replyToken;
+        let userId: string = event.source.userId;
+        return await this.statusMgr.setStatus(userId, StatusDef.settingContent)
+            .then(() => this.line.replyText(
+                token, '新しいリマインド内容を入力してください。', [ false, true ])
+            )
+            .then(r => {
+                if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
+                    return true;
+                } else {
+                    return false;
+                }
+            });
+    }
+
 
 }

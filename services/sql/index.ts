@@ -3,6 +3,7 @@ export const tn = 'reminders';
 
 // table column name
 export const tc = {
+    id:  'Id',
     usr: 'line_user',       // LINEユーザID
     cnt: 'content',         // リマインド内容
     rdt: 'remind_datetime', // リマインド日時

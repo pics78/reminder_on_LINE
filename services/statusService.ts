@@ -1,15 +1,24 @@
-
 import Redis from 'ioredis';
 
-declare type Status =
-    'none' | 'setting_content' | 'setting_datetime' | 'modify_content' | 'modify_datetime';
+export declare type Status =
+    'none' |
+    'setting_content' | 'setting_datetime' |
+    'modify_content'  | 'modify_datetime';
+
+export const isStatus = (s: string): s is Status => {
+    return  s === StatusDef.none ||
+            s === StatusDef.settingContent ||
+            s === StatusDef.settingDatetime ||
+            s === StatusDef.modifyContent  ||
+            s === StatusDef.modifyDatetime;
+}
 
 export class StatusDef {
-    static readonly none: Status = 'none';
-    static readonly settingContent: Status = 'setting_content';
+    static readonly none:            Status = 'none';
+    static readonly settingContent:  Status = 'setting_content';
     static readonly settingDatetime: Status = 'setting_datetime';
-    static readonly modifyContent: Status = 'modify_content';
-    static readonly modifyDatetime: Status = 'modify_datetime';
+    static readonly modifyContent:   Status = 'modify_content';
+    static readonly modifyDatetime:  Status = 'modify_datetime';
 
     private constructor(){};
 }
@@ -33,56 +42,39 @@ export class StatusMgr {
         return `content_${userId}`;
     }
 
-    public get = async (key: string): Promise<string> => {
-        return this.redis.get(key)
-            .then(s => s != null ? s : '')
-            .catch(e => {
-                console.error(e);
-                return '';
-            });
+    public get = async (key: string): Promise<string|null> => {
+        return await this.redis.get(key);
     }
 
-    public set = async (key: string, val: string): Promise<'OK'|'NG'> => {
-        return this.redis.set(key, val)
-            .then(ok => ok == 'OK' ? 'OK' : 'NG')
-            .catch(e => {
-                console.error(e);
-                return 'NG';
-            });
+    public set = async (key: string, val: string): Promise<Boolean> => {
+        return await this.redis.set(key, val).then(r => r == 'OK' ? true : false);
     }
 
-    public getStatus = async (userId: string): Promise<string> => {
-        return this.get(this.statusKey(userId));
+    public getStatus = async (userId: string): Promise<Status|null> => {
+        return await this.get(this.statusKey(userId))
+            .then(s => s != null && isStatus(s) ? s : null);
     }
 
-    public setStatus = async (userId: string, status: Status): Promise<'OK'|'NG'> => {
-        return this.set(this.statusKey(userId), status);
-    }
-
-    public isStatus = async (userId: string, status: string): Promise<Boolean> => {
-        return await this.getStatus(userId)
-            .then(s => s == status)
-            .catch(e => {
-                console.error(e);
-                return false;
-            });
+    public setStatus = async (userId: string, status: Status): Promise<Boolean> => {
+        return await this.set(this.statusKey(userId), status);
     }
 
     public getContent = async (userId: string): Promise<string> => {
-        return this.get(this.contentKey(userId));
+        return await this.get(this.contentKey(userId))
+            .then(content => content != null ? content : '');
     }
 
-    public setContent = async (userId: string, content: string): Promise<'OK'|'NG'> => {
-        return this.set(this.contentKey(userId), content);
+    public setContent = async (userId: string, content: string): Promise<Boolean> => {
+        return await this.set(this.contentKey(userId), content);
     }
 
-    public reset = async (userId: string): Promise<'OK'|'NG'> => {
-        return this.set(this.statusKey(userId), StatusDef.none)
-            .then(ok => this.redis.del(this.contentKey(userId)))
-            .then(n => n == 1 ? 'OK' : 'NG')
-            .catch(e => {
-                console.error(e);
-                return 'NG';
-            });
+    public reset = async (userId: string, savedContentFlg: Boolean): Promise<Boolean> => {
+        let isStatusResetOk = await this.set(this.statusKey(userId), StatusDef.none);
+        let isContentResetOk = !isStatusResetOk ? false :
+                !savedContentFlg ? true :
+                    await this.redis.del(this.contentKey(userId))
+                        .then(n => n == 1 ? true : false);
+        
+        return isStatusResetOk && isContentResetOk;               
     }
 }

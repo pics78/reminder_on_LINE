@@ -1,4 +1,4 @@
-import { Client, ClientConfig, middleware, MiddlewareConfig, MessageAPIResponseBase } from '@line/bot-sdk';
+import { Client, ClientConfig, middleware, MiddlewareConfig, MessageAPIResponseBase, Message, QuickReply, QuickReplyItem } from '@line/bot-sdk';
 import { getRemindMomentJustAfter, formatted } from '../utils/momentUtil'
 import moment from 'moment';
 
@@ -6,6 +6,10 @@ export interface LINEConfig extends ClientConfig, MiddlewareConfig {
     channelAccessToken: string;
     channelSecret: string;
 }
+
+export declare type QuickReplyFlgs = [
+    backToContentFlg: Boolean, cancelFlg: Boolean
+];
 
 export const lineMiddleware = (config: LINEConfig) => {
     return middleware(config);
@@ -17,16 +21,20 @@ export class LINEService {
         this.client = new Client(config);
     }
 
-    public replyText = async (token: string, text: string): Promise<MessageAPIResponseBase> => {
-        return this.client.replyMessage(token, {
+    public replyText = async (token: string, text: string, quickReplyFlgs?: QuickReplyFlgs): Promise<MessageAPIResponseBase> => {
+        let message: Message = {
             type: 'text',
-            text: text
-        });
+            text: text,
+        };
+        if (quickReplyFlgs) {
+            message.quickReply = this.addQuickReplyObj(quickReplyFlgs);
+        }
+        return await this.client.replyMessage(token, message);
     }
 
-    public replyDatetimePicker = async (token: string) => {
+    public replyDatetimePicker = async (token: string, quickReplyFlgs?: QuickReplyFlgs): Promise<MessageAPIResponseBase> => {
         const minDatetime: string = formatted(getRemindMomentJustAfter(moment()));
-        return this.client.replyMessage(token, {
+        let message: Message = {
             type: 'template',
             altText: '日時選択',
             template: {
@@ -43,15 +51,37 @@ export class LINEService {
                     }
                 ]
             }
-        });
+        }
+        if (quickReplyFlgs) {
+            message.quickReply = this.addQuickReplyObj(quickReplyFlgs);
+        }
+        return await this.client.replyMessage(token, message);
+    }
+
+    public addQuickReplyObj = (quickReplyFlgs: QuickReplyFlgs): QuickReply => {
+        let quickReplyItems: QuickReplyItem[] = [];
+        if (quickReplyFlgs[0]) {
+            quickReplyItems.push({
+                type: 'action',
+                action: {
+                    type: 'postback',
+                    label: '内容入力に戻る',
+                    text: '$back',
+                    data: 'action=back',
+                }
+            });
+        }
+        if (quickReplyFlgs[1]) {
+            quickReplyItems.push({
+                type: 'action',
+                action: {
+                    type: 'postback',
+                    label: '中断する',
+                    text: '$cancel',
+                    data: 'action=cancel',
+                }
+            });
+        }
+        return { items: quickReplyItems };
     }
 }
-
-
-// TODO
-// クイックリプライ機能を使って登録中に入力した内容などを戻って変更できるようにする
-// https://developers.line.biz/ja/docs/messaging-api/using-quick-reply/#set-quick-reply-buttons
-
-// 日時選択状態時にクイックリプライの内容編集を押すともう一度内容を入力できる
-// 内容入力または日時選択状態時にクイックリプライの取り消しを押すとリマインド登録状態をキャンセルできる
-// など

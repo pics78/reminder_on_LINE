@@ -2,7 +2,8 @@ import { Express, Request, Response } from 'express';
 import { ClientConfig } from 'pg';
 import { LINEConfig, lineMiddleware } from './services/lineConnectService';
 import { StoreConfig } from './services/statusService';
-import { EventHandler, WebhookEventForReminder } from './events';
+import { WebhookEventForReminder } from './events/def/types';
+import { EventHandler } from './events'
 
 const storeConfig: StoreConfig = {
     url:    process.env.REDIS_URL,

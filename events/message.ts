@@ -1,18 +1,10 @@
-import { ReminderEventBase } from './base';
+import { MessageEventForReminder, WebhookEventForReminder } from './def/types';
 import { LINE_REQUEST_ID_HTTP_HEADER_NAME } from '@line/bot-sdk';
 import { ClientConfig } from 'pg';
 import { LINEService, LINEConfig } from '../services/lineConnectService';
 import { ReminderDBService } from '../services/dbConnectService';
 import { StatusMgr, StatusDef, StoreConfig } from '../services/statusService';
 import { ReminderErrorHandler, ErrorType } from './error';
-
-export declare type MessageEventForReminder = {
-    type: 'message';
-    message: {
-        type: 'text';
-        text: string;
-    }
-} & ReminderEventBase;
 
 export class MessageEventHandler {
     private statusMgr: StatusMgr;
@@ -27,39 +19,41 @@ export class MessageEventHandler {
     }
 
     // リマインダー登録開始処理 -> リマインド内容入力状態へ遷移
-    public startRegist = async (event: MessageEventForReminder): Promise<'OK'|'NG'> => {
+    public startRegist = async (event: MessageEventForReminder): Promise<Boolean> => {
         let token: string = event.replyToken;
         let userId: string = event.source.userId;
-        let status: string = await this.statusMgr.getStatus(userId);
+        let status: string|null = await this.statusMgr.getStatus(userId);
         // 【ステータス確認】
         // パターン1: 初めて登録する  -> そのユーザに対応するレコードが存在しない場合
         // パターン2: 2回目以降の登録 -> ステータスが`StatusDef.none`になっている場合
         if (status && status !== StatusDef.none) {
-            this.errHandler.handleError(ErrorType.unexpectedStatus, token, userId, status, `${StatusDef.none}|undefined`);
-            return 'NG';
+            this.errHandler.handleError(ErrorType.unexpectedStatus, token, userId, status, StatusDef.none);
+            return false;
         }
-        return await this.line.replyText(event.replyToken, '登録処理を開始します。\nリマインド内容を送信してください。')
+        return await this.line.replyText(
+            token, '登録処理を開始します。\nリマインド内容を送信してください。', [ false, true ])
             .then(() => this.statusMgr.setStatus(userId, StatusDef.settingContent));
     }
 
     // リマインド内容保持 -> リマインド日時選択状態へ遷移
-    public contentReturned = async (event: MessageEventForReminder): Promise<'OK'|'NG'> => {
+    public contentReturned = async (event: MessageEventForReminder): Promise<Boolean> => {
         let token: string = event.replyToken;
         let userId: string = event.source.userId;
-        let status: string = await this.statusMgr.getStatus(userId);
+        let status: string = await this.statusMgr.getStatus(userId)
+            .then(s => s != null ? s : 'null');
         // 【ステータス確認】
         // パターン1: ステータスが`StatusDef.settingContent`になっている場合
         if (status !== StatusDef.settingContent) {
             this.errHandler.handleError(ErrorType.unexpectedStatus, token, userId, status, StatusDef.settingContent);
-            return 'NG';
+            return false;
         }
         let content: string = event.message.text;
         return await this.statusMgr.setContent(userId, content)
-            .then(() => this.line.replyDatetimePicker(event.replyToken))
+            .then(() => this.line.replyDatetimePicker(token, [ true, true ]))
             .then(() => this.statusMgr.setStatus(userId, StatusDef.settingDatetime))
             .catch(e => {
                 console.error(e);
-                return 'NG';
+                return false;
             });
     }
 

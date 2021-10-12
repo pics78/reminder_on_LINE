@@ -1,14 +1,19 @@
+import { StickerEventMessage } from '@line/bot-sdk';
 import { Pool, PoolClient, ClientConfig, QueryResult } from 'pg';
 import { tn, tc, ReminderRow, QueryString } from './sql'
 
 interface ReminderQueryString extends QueryString {
     select_list: string,
     insert: string,
+    update: string,
+    delete: string,
 }
 
 const sql: ReminderQueryString = {
     select_list: `select * from ${tn} where line_user = $1`,
     insert: `insert into ${tn}(${tc.usr}, ${tc.cnt}, ${tc.rdt}) values ($1, $2, $3)`,
+    update: `update ${tn} set $1 = $2 where ${tc.id} = $3`,
+    delete: `delete from ${tn} where ${tc.id} = ${1}`,
 };
 
 export class ReminderDBService {
@@ -52,5 +57,13 @@ export class ReminderDBService {
 
     public insert = async (usr: string, cnt: string, rdt: string): Promise<QueryResult> => {
         return await this.run(sql.insert, [usr, cnt, rdt]);
+    }
+
+    public updateContent = async (content: string, id: number) => {
+        return await this.run(sql.update, [tc.cnt, content, id]);
+    }
+
+    public updateDatetime = async (datetime: string, id: number) => {
+        return await this.run(sql.update, [tc.rdt, datetime, id]);
     }
 }
