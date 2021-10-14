@@ -10,10 +10,10 @@ export const tc = {
 };
 
 export interface ReminderRow {
-    id?: number,
-    usr?: string,
-    cnt?: string,
-    rdt?: string,
+    id: number,
+    usr: string,
+    cnt: string,
+    rdt: string,
 }
 
 export interface QueryString {

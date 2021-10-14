@@ -1,4 +1,4 @@
-import { Client, ClientConfig, middleware, MiddlewareConfig, MessageAPIResponseBase, Message, QuickReply, QuickReplyItem } from '@line/bot-sdk';
+import { Client, ClientConfig, middleware, MiddlewareConfig, MessageAPIResponseBase, Message, QuickReply, QuickReplyItem, FlexBubble } from '@line/bot-sdk';
 import { getRemindMomentJustAfter, formatted } from '../utils/momentUtil'
 import moment from 'moment';
 
@@ -83,5 +83,153 @@ export class LINEService {
             });
         }
         return { items: quickReplyItems };
+    }
+
+    public replyFlexCarouselMessages = async (token: string, bubbles: FlexBubble[], altText?: string) => {
+        return await this.client.replyMessage(token, {
+            type: 'flex',
+            altText: altText || 'flex message',
+            contents: {
+                type: 'carousel',
+                contents: bubbles,
+            }
+        });
+    }
+
+    public addFlexBubbleObj = (reminderId: number, content: string, datetime: string, number: number): FlexBubble => {
+        return {
+            type: "bubble",
+            header: {
+              type: "box",
+              layout: "horizontal",
+              contents:[
+                {
+                  type: "text",
+                  text: "登録リマインド",
+                  color: "#00CB32",
+                  weight: "bold",
+                  size: "xs"
+                },
+                {
+                  type: "text",
+                  text: `(${number}/13)`,
+                  size: "xs",
+                  weight: "bold",
+                  offsetEnd: "11%"
+                }
+              ],
+              position: "relative"
+            },
+            body: {
+                type: 'box',
+                layout: 'vertical',
+                contents: [
+                    {
+                        type: 'box',
+                        layout: 'vertical',
+                        spacing: 'sm',
+                        contents: [
+                            {
+                                type: 'box',
+                                layout: 'vertical',
+                                contents: [
+                                    {
+                                        type: 'text',
+                                        text: '内容',
+                                        size: 'sm',
+                                        color: '#00CB32',
+                                        weight: 'bold',
+                                        decoration: 'underline',
+                                        offsetBottom: 'md'
+                                    },
+                                    {
+                                        type: 'text',
+                                        text: content,
+                                        size: 'sm',
+                                        color: '#111111',
+                                        align: 'start',
+                                        wrap: true
+                                    }
+                                ],
+                                position: 'relative',
+                                paddingTop: 'xxl'
+                            },
+                            {
+                                type: 'separator',
+                                margin: 'md',
+                                color: '#B2B2B2'
+                            },
+                            {
+                                type: 'box',
+                                layout: 'vertical',
+                                contents: [
+                                    {
+                                    type: 'text',
+                                    text: '日時',
+                                    size: 'sm',
+                                    color: '#00CB32',
+                                    weight: 'bold',
+                                    decoration: 'underline',
+                                    offsetBottom: 'md'
+                                    },
+                                    {
+                                    type: 'text',
+                                    text: datetime,
+                                    size: 'sm',
+                                    color: '#111111',
+                                    align: 'center'
+                                    }
+                                ],
+                                position: 'relative',
+                                margin: 'xs',
+                                paddingTop: 'xxl'
+                            }
+                        ]
+                    }
+                ],
+                paddingTop: 'xs'
+            },
+            footer: {
+                type: 'box',
+                layout: 'horizontal',
+                contents: [
+                    {
+                    type: 'button',
+                    action: {
+                        type: 'postback',
+                        label: '編集',
+                        data: `action=modify&id=${reminderId}`,
+                        displayText: '$modify'
+                    },
+                    position: 'relative',
+                    color: '#00CB00'
+                    },
+                    {
+                    type: 'separator',
+                    color: '#B2B2B2'
+                    },
+                    {
+                    type: 'button',
+                    action: {
+                        type: 'postback',
+                        label: '削除',
+                        data: `action=deletey&id=${reminderId}`,
+                        displayText: '$delete'
+                    },
+                    position: 'relative',
+                    color: '#00BFFF'
+                    }
+                ]
+            },
+            styles: {
+                header: {
+                  separator: true,
+                  backgroundColor: "#E5E5E5"
+                },
+                footer: {
+                  separator: true
+                }
+              }
+        }
     }
 }

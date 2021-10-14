@@ -1,5 +1,5 @@
-import { MessageEventForReminder, WebhookEventForReminder } from './def/types';
-import { LINE_REQUEST_ID_HTTP_HEADER_NAME } from '@line/bot-sdk';
+import { MessageEventForReminder } from './def/types';
+import { LINE_REQUEST_ID_HTTP_HEADER_NAME, FlexBubble } from '@line/bot-sdk';
 import { ClientConfig } from 'pg';
 import { LINEService, LINEConfig } from '../services/lineConnectService';
 import { ReminderDBService } from '../services/dbConnectService';
@@ -64,19 +64,17 @@ export class MessageEventHandler {
         let userId: string = event.source.userId;
         return await this.db.selectAll(userId)
             .then(rr => {
-                let reply: string = '';
+                let bubbles: FlexBubble[] = [];
                 let n: number = 1;
                 if (rr.length > 0) {
                     rr.map(row => {
-                        reply += [
-                            `(${n})`, '・内容：', row.cnt, '・リマインド時刻：', row.rdt, '\n'
-                        ].join('\n');
+                        bubbles.push(this.line.addFlexBubbleObj(row.id, row.cnt, row.rdt, n));
                         n++;
                     });
+                    return this.line.replyFlexCarouselMessages(event.replyToken, bubbles);
                 } else {
-                    reply = '現在、登録されているリマインドはありません。';
+                    return this.line.replyText(event.replyToken, '現在、登録されているリマインドはありません。');
                 }
-                return this.line.replyText(event.replyToken, reply);
             })
             .then(r => {
                 if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
