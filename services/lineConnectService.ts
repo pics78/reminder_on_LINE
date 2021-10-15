@@ -108,17 +108,18 @@ export class LINEService {
                   text: "登録リマインド",
                   color: "#00CB32",
                   weight: "bold",
-                  size: "xs"
+                  size: "md"
                 },
                 {
                   type: "text",
                   text: `(${number}/13)`,
                   size: "xs",
                   weight: "bold",
-                  offsetEnd: "11%"
+                  align: "end"
                 }
               ],
-              position: "relative"
+              backgroundColor: "#00CB32",
+              alignItems: "flex-end"
             },
             body: {
                 type: 'box',
