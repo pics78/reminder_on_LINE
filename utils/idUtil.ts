@@ -1,7 +1,5 @@
-import moment from 'moment';
+import uuid from 'node-uuid';
 
-// LINEユーザIDとリマインド番号からDBのIDを生成する
-export const getId = (userId: string): string => {
-    const dateStr: string = moment().format().replace(/[^\d]/g, '');
-    return Buffer.from(`${userId}${dateStr}`).toString('base64');
+export const getId = (): string => {
+    return uuid.v1(); // 時刻とMACアドレスを元に36文字のuuidを生成
 }

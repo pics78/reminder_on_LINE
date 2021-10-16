@@ -21,7 +21,8 @@ export class LINEService {
         this.client = new Client(config);
     }
 
-    public replyText = async (token: string, text: string, quickReplyFlgs?: QuickReplyFlgs): Promise<MessageAPIResponseBase> => {
+    public replyText =
+        async (token: string, text: string, quickReplyFlgs?: QuickReplyFlgs): Promise<MessageAPIResponseBase> => {
         let message: Message = {
             type: 'text',
             text: text,
@@ -32,7 +33,8 @@ export class LINEService {
         return await this.client.replyMessage(token, message);
     }
 
-    public replyDatetimePicker = async (token: string, quickReplyFlgs?: QuickReplyFlgs): Promise<MessageAPIResponseBase> => {
+    public replyDatetimePicker =
+        async (token: string, quickReplyFlgs?: QuickReplyFlgs, text?: string): Promise<MessageAPIResponseBase> => {
         const minDatetime: string = formatted(getRemindMomentJustAfter(moment()));
         let message: Message = {
             type: 'template',
@@ -40,7 +42,7 @@ export class LINEService {
             template: {
                 type: 'buttons',
                 title: 'リマインド日時設定',
-                text: '毎時0分から5分間隔で、その時刻から次の処理時刻までの間に設定されたリマインドの処理を行います。',
+                text: text || '毎時0分から5分間隔で、その時刻から次の処理時刻までの間に設定されたリマインドの処理を行います。',
                 actions: [
                     {
                         type: 'datetimepicker',
@@ -52,6 +54,35 @@ export class LINEService {
                 ]
             }
         }
+        if (quickReplyFlgs) {
+            message.quickReply = this.addQuickReplyObj(quickReplyFlgs);
+        }
+        return await this.client.replyMessage(token, message);
+    }
+
+    public replyFlexCarouselMessages =
+        async (token: string, bubbles: FlexBubble[], altText?: string, quickReplyFlgs?: QuickReplyFlgs): Promise<MessageAPIResponseBase> => {
+        let message: Message =  {
+            type: 'flex',
+            altText: altText || 'flex message',
+            contents: {
+                type: 'carousel',
+                contents: bubbles,
+            }
+        };
+        if (quickReplyFlgs) {
+            message.quickReply = this.addQuickReplyObj(quickReplyFlgs);
+        }
+        return await this.client.replyMessage(token, message);
+    }
+
+    public replyFlexBubbleMessage =
+        async (token: string, bubble: FlexBubble, altText?: string, quickReplyFlgs?: QuickReplyFlgs): Promise<MessageAPIResponseBase> => {
+        let message: Message = {
+            type: 'flex',
+            altText: altText || 'flex message',
+            contents: bubble
+        };
         if (quickReplyFlgs) {
             message.quickReply = this.addQuickReplyObj(quickReplyFlgs);
         }
@@ -83,154 +114,5 @@ export class LINEService {
             });
         }
         return { items: quickReplyItems };
-    }
-
-    public replyFlexCarouselMessages = async (token: string, bubbles: FlexBubble[], altText?: string) => {
-        return await this.client.replyMessage(token, {
-            type: 'flex',
-            altText: altText || 'flex message',
-            contents: {
-                type: 'carousel',
-                contents: bubbles,
-            }
-        });
-    }
-
-    public addFlexBubbleObj = (reminderId: number, content: string, datetime: string, number: number): FlexBubble => {
-        return {
-            type: "bubble",
-            header: {
-              type: "box",
-              layout: "horizontal",
-              contents:[
-                {
-                  type: "text",
-                  text: "登録リマインド",
-                  color: "#00CB32",
-                  weight: "bold",
-                  size: "md"
-                },
-                {
-                  type: "text",
-                  text: `(${number}/13)`,
-                  size: "xs",
-                  weight: "bold",
-                  align: "end"
-                }
-              ],
-              backgroundColor: "#00CB32",
-              alignItems: "flex-end"
-            },
-            body: {
-                type: 'box',
-                layout: 'vertical',
-                contents: [
-                    {
-                        type: 'box',
-                        layout: 'vertical',
-                        spacing: 'sm',
-                        contents: [
-                            {
-                                type: 'box',
-                                layout: 'vertical',
-                                contents: [
-                                    {
-                                        type: 'text',
-                                        text: '内容',
-                                        size: 'sm',
-                                        color: '#00CB32',
-                                        weight: 'bold',
-                                        decoration: 'underline',
-                                        offsetBottom: 'md'
-                                    },
-                                    {
-                                        type: 'text',
-                                        text: content,
-                                        size: 'sm',
-                                        color: '#111111',
-                                        align: 'start',
-                                        wrap: true
-                                    }
-                                ],
-                                position: 'relative',
-                                paddingTop: 'xxl'
-                            },
-                            {
-                                type: 'separator',
-                                margin: 'md',
-                                color: '#B2B2B2'
-                            },
-                            {
-                                type: 'box',
-                                layout: 'vertical',
-                                contents: [
-                                    {
-                                    type: 'text',
-                                    text: '日時',
-                                    size: 'sm',
-                                    color: '#00CB32',
-                                    weight: 'bold',
-                                    decoration: 'underline',
-                                    offsetBottom: 'md'
-                                    },
-                                    {
-                                    type: 'text',
-                                    text: datetime,
-                                    size: 'sm',
-                                    color: '#111111',
-                                    align: 'center'
-                                    }
-                                ],
-                                position: 'relative',
-                                margin: 'xs',
-                                paddingTop: 'xxl'
-                            }
-                        ]
-                    }
-                ],
-                paddingTop: 'xs'
-            },
-            footer: {
-                type: 'box',
-                layout: 'horizontal',
-                contents: [
-                    {
-                    type: 'button',
-                    action: {
-                        type: 'postback',
-                        label: '編集',
-                        data: `action=modify&id=${reminderId}`,
-                        displayText: '$modify'
-                    },
-                    position: 'relative',
-                    color: '#00CB00'
-                    },
-                    {
-                    type: 'separator',
-                    color: '#B2B2B2'
-                    },
-                    {
-                    type: 'button',
-                    action: {
-                        type: 'postback',
-                        label: '削除',
-                        data: `action=deletey&id=${reminderId}`,
-                        displayText: '$delete'
-                    },
-                    position: 'relative',
-                    color: '#00BFFF'
-                    }
-                ]
-            },
-            styles: {
-                header: {
-                  separator: true,
-                  backgroundColor: "#E5E5E5"
-                },
-                footer: {
-                  separator: true
-                }
-              }
-        }
     }
 }

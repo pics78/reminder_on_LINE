@@ -27,6 +27,12 @@ export class EventHandler {
                     } else if (msg === 'list') {
                         this.messageEventHandler.showList(event);
                     }
+                } else if (isPostbackEventForReminder(event)) {
+                    if (event.postback.data.match(/^action=modify&id=.*$/)) {
+                        this.postbackEventHandler.modifyReturned(event);
+                    } else if (event.postback.data.match(/^action=delete&id=.*$/)) {
+                        this.postbackEventHandler.deleteReturned(event);
+                    }
                 }
                 break;
             case StatusDef.settingContent:
@@ -42,20 +48,30 @@ export class EventHandler {
                 break;
             case StatusDef.settingDatetime:
                 if (isPostbackEventForReminder(event)) {
-                    const data: string = event.postback.data;
-                    if (data === 'action=set_remind_datetime') {
+                    if (event.postback.data === 'action=set_remind_datetime') {
                         this.postbackEventHandler.datetimeReturned(event);
-                    } else if (data === 'action=cancel') {
+                    } else if (event.postback.data === 'action=cancel') {
                         this.postbackEventHandler.cancelReturned(event);
-                    } else if (data === 'action=back') {
+                    } else if (event.postback.data === 'action=back') {
                         this.postbackEventHandler.backToContentReturned(event);
+                    }
+                }
+                break;
+            case StatusDef.modify:
+                if (isPostbackEventForReminder(event)) {
+                    if (event.postback.data === 'action=modify_content') {
+                        this.postbackEventHandler.modifyContentReturned(event);
+                    } else if (event.postback.data === 'action=modify_datetime') {
+                        this.postbackEventHandler.modifyDatetimeReturned(event);
+                    } else if (event.postback.data === 'action=cancel') {
+                        this.postbackEventHandler.cancelReturned(event);
                     }
                 }
                 break;
             case StatusDef.modifyContent:
                 if (isMessageEventForReminder(event)) {
                     if (!event.message.text.match(/^\$.*/)) {
-                        this.messageEventHandler.contentReturned(event);
+                        this.messageEventHandler.newContentReturned(event);
                     }
                 } else if (isPostbackEventForReminder(event)) {
                     if (event.postback.data === 'action=cancel') {
@@ -65,14 +81,29 @@ export class EventHandler {
                 break;
             case StatusDef.modifyDatetime:
                 if (isPostbackEventForReminder(event)) {
-                    const data: string = event.postback.data;
-                    if (data === 'action=set_remind_datetime') {
-                        this.postbackEventHandler.datetimeReturned(event);
-                    } else if (data === 'action=cancel') {
+                    if (event.postback.data === 'action=modify_remind_datetime') {
+                        this.postbackEventHandler.newDatetimeReturned(event);
+                    } else if (event.postback.data === 'action=cancel') {
                         this.postbackEventHandler.cancelReturned(event);
                     }
                 }
                 break;
+            case StatusDef.confirmContent:
+                if (isPostbackEventForReminder(event)) {
+                    if (event.postback.data === 'action=confirm_content') {
+                        this.postbackEventHandler.confirmContentReturned(event);
+                    } else if (event.postback.data === 'action=retry_content') {
+                    }
+                }
+                break;
+            case StatusDef.confirmDatetime:
+                if (isPostbackEventForReminder(event)) {
+                    if (event.postback.data === 'action=confirm_datetime') {
+                        this.postbackEventHandler.confirmDatetimeReturned(event);
+                    } else if (event.postback.data === 'action=retry_datetime') {
+                    }
+                    break;
+                }
             default:
                 // For now, do nothing.
         }

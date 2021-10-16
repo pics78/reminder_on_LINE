@@ -2,7 +2,9 @@ import { MessageEventForReminder } from './def/types';
 import { LINE_REQUEST_ID_HTTP_HEADER_NAME, FlexBubble } from '@line/bot-sdk';
 import { ClientConfig } from 'pg';
 import { LINEService, LINEConfig } from '../services/lineConnectService';
+import { bubbleForList, bubbleToConfirmContent } from '../services/lineFlexMessagesDef';
 import { ReminderDBService } from '../services/dbConnectService';
+import { getDisplayString } from '../utils/momentUtil';
 import { StatusMgr, StatusDef, StoreConfig } from '../services/statusService';
 import { ReminderErrorHandler, ErrorType } from './error';
 
@@ -20,55 +22,56 @@ export class MessageEventHandler {
 
     // リマインダー登録開始処理 -> リマインド内容入力状態へ遷移
     public startRegist = async (event: MessageEventForReminder): Promise<Boolean> => {
-        let token: string = event.replyToken;
-        let userId: string = event.source.userId;
-        let status: string|null = await this.statusMgr.getStatus(userId);
+        let status: string|null = await this.statusMgr.getStatus(event.source.userId);
         // 【ステータス確認】
         // パターン1: 初めて登録する  -> そのユーザに対応するレコードが存在しない場合
         // パターン2: 2回目以降の登録 -> ステータスが`StatusDef.none`になっている場合
         if (status && status !== StatusDef.none) {
-            this.errHandler.handleError(ErrorType.unexpectedStatus, token, userId, status, StatusDef.none);
+            this.errHandler.handleError(ErrorType.unexpectedStatus, event.replyToken, event.source.userId, status, StatusDef.none);
             return false;
         }
         return await this.line.replyText(
-            token, '登録処理を開始します。\nリマインド内容を送信してください。', [ false, true ])
-            .then(() => this.statusMgr.setStatus(userId, StatusDef.settingContent));
+            event.replyToken, '登録処理を開始します。\nリマインド内容を送信してください。', [ false, true ])
+            .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.settingContent));
     }
 
     // リマインド内容保持 -> リマインド日時選択状態へ遷移
     public contentReturned = async (event: MessageEventForReminder): Promise<Boolean> => {
-        let token: string = event.replyToken;
-        let userId: string = event.source.userId;
-        let status: string = await this.statusMgr.getStatus(userId)
+        let status: string = await this.statusMgr.getStatus(event.source.userId)
             .then(s => s != null ? s : 'null');
         // 【ステータス確認】
         // パターン1: ステータスが`StatusDef.settingContent`になっている場合
         if (status !== StatusDef.settingContent) {
-            this.errHandler.handleError(ErrorType.unexpectedStatus, token, userId, status, StatusDef.settingContent);
+            this.errHandler.handleError(ErrorType.unexpectedStatus, event.replyToken, event.source.userId, status, StatusDef.settingContent);
             return false;
         }
         let content: string = event.message.text;
-        return await this.statusMgr.setContent(userId, content)
-            .then(() => this.line.replyDatetimePicker(token, [ true, true ]))
-            .then(() => this.statusMgr.setStatus(userId, StatusDef.settingDatetime))
+        return await this.statusMgr.setContent(event.source.userId, content)
+            .then(() => this.line.replyDatetimePicker(event.replyToken, [true, true]))
+            .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.settingDatetime))
             .catch(e => {
                 console.error(e);
                 return false;
             });
     }
 
-    // 登録したリマインド一覧表示処理
-    // どのステータス状態でも可能
-    // TODO: 中途半端なステータス状態のときは一覧を返した後、状態を進めるよう促す文言も返したほうが良いかも...?
+    public newContentReturned = async (event: MessageEventForReminder): Promise<Boolean> => {
+        let newContent: string = event.message.text;
+        let oldContent: string = await this.statusMgr.getContent(event.source.userId);
+        return await this.line.replyFlexBubbleMessage(
+            event.replyToken, bubbleToConfirmContent(oldContent, newContent))
+            .then(() => this.statusMgr.setContent(event.source.userId, newContent))
+            .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.confirmContent));
+    }
+
     public showList = async (event: MessageEventForReminder): Promise<'OK'|'NG'> => {
-        let userId: string = event.source.userId;
-        return await this.db.selectAll(userId)
+        return await this.db.selectAll(event.source.userId)
             .then(rr => {
                 let bubbles: FlexBubble[] = [];
                 let n: number = 1;
                 if (rr.length > 0) {
                     rr.map(row => {
-                        bubbles.push(this.line.addFlexBubbleObj(row.id, row.cnt, row.rdt, n));
+                        bubbles.push(bubbleForList(n, row.id, row.cnt, getDisplayString(row.rdt)));
                         n++;
                     });
                     return this.line.replyFlexCarouselMessages(event.replyToken, bubbles);

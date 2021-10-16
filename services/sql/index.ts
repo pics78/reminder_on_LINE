@@ -10,7 +10,7 @@ export const tc = {
 };
 
 export interface ReminderRow {
-    id: number,
+    id: string,
     usr: string,
     cnt: string,
     rdt: string,

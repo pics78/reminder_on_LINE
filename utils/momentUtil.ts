@@ -16,7 +16,7 @@ export const formatted = (m: Moment): string => {
 }
 
 // 表示用文字列への変換
-export const getDisplayString = (dt: string): string => {
+export const getDisplayString = (dt: string|Moment): string => {
     moment.locale("ja");
     return moment(dt).format('YYYY年MM月DD日(ddd)HH時mm分');
 }
