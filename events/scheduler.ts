@@ -4,6 +4,7 @@ import { ReminderDBService } from '../services/dbConnectService';
 import { StatusMgr, StoreConfig } from '../services/statusService';
 import { getRemindMomentJustBefore, formatted } from '../utils/momentUtil'
 import moment from 'moment';
+import { resolve } from 'path/posix';
 
 export class SchedulerHandler {
     private db: ReminderDBService;
@@ -19,12 +20,16 @@ export class SchedulerHandler {
             .then(rrs => {
                 let targetUser = '';
                 rrs.map(rr => {
-                    if (rr.usr !== targetUser) {
-                        targetUser = rr.usr;
-                        this.line.sendMessage(rr.usr, 'リマインドをお知らせします。');
-                    }
-                    this.line.sendMessage(rr.usr, rr.cnt)
-                        .then(() => this.db.sent(rr.id, rr.usr));
+                    new Promise(resolve => {
+                        if (rr.usr !== targetUser) {
+                            targetUser = rr.usr;
+                            resolve(this.line.sendMessage(rr.usr, 'リマインドをお知らせします。'));
+                        } else {
+                            resolve(null);
+                        }
+                    })
+                    .then(() => this.line.sendMessage(rr.usr, rr.cnt))
+                    .then(() => this.db.sent(rr.id, rr.usr));
                 });
             });
     }
