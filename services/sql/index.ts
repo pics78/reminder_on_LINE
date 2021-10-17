@@ -7,6 +7,7 @@ export const tc = {
     usr: 'line_user',       // LINEユーザID
     cnt: 'content',         // リマインド内容
     rdt: 'remind_datetime', // リマインド日時
+    snt: 'sent',            // リマインド送信済フラグ
 };
 
 export interface ReminderRow {
@@ -14,11 +15,5 @@ export interface ReminderRow {
     usr: string,
     cnt: string,
     rdt: string,
-}
-
-export interface QueryString {
-    select_list?: string,
-    insert?: string,
-    update?: string,
-    delete?: string,
+    snt?: string,
 }

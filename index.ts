@@ -33,6 +33,28 @@ app.get('/', (_req: Request, res: Response) => {
     res.send(JSON.stringify({'status': 'OK'}));
 });
 
+app.get('/remind', async (req: Request, res: Response) => {
+    if (req.header('signature') === process.env.scheduler_signature) {
+        try {
+            await eventHandler.remind()
+                .then(() => {
+                    res.status(200).json({
+                        status: 'success'
+                    });
+                });
+        } catch(e: unknown) {
+            console.error(e);
+            res.status(500).json({
+                status: 'error'
+            });
+        }
+    } else {
+        res.status(500).json({
+            status: 'signature error'
+        });
+    }
+});
+
 app.post('/webhook', lineMiddleware(lineConfig), async (req: Request, res: Response) => {
     const events: WebhookEventForReminder[] = req.body.events;
 

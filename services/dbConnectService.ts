@@ -3,12 +3,14 @@ import { tn, tc, ReminderRow } from './sql';
 import { getId } from '../utils/idUtil';
 
 const sql = {
-    select_list: `select * from ${tn} where line_user = $1`,
-    select: `select * from ${tn} where ${tc.id} = $1`,
-    insert: `insert into ${tn} (${tc.id}, ${tc.usr}, ${tc.cnt}, ${tc.rdt}) values ($1, $2, $3, $4)`,
-    update_content: `update ${tn} set ${tc.cnt} = $1 where ${tc.id} = $2`,
-    update_datetime: `update ${tn} set ${tc.rdt} = $1 where ${tc.id} = $2`,
+    select_list: `select * from ${tn} where line_user = $1 and ${tc.snt} = false`,
+    select: `select * from ${tn} where ${tc.id} = $1 and ${tc.snt} = false`,
+    insert: `insert into ${tn} (${tc.id}, ${tc.usr}, ${tc.cnt}, ${tc.rdt}, ${tc.snt}) values ($1, $2, $3, $4, false)`,
+    update_content: `update ${tn} set ${tc.cnt} = $1 where ${tc.id} = $2 and ${tc.snt} = false`,
+    update_datetime: `update ${tn} set ${tc.rdt} = $1 where ${tc.id} = $2 and ${tc.snt} = false`,
     delete: `delete from ${tn} where ${tc.id} = $1 and ${tc.usr} = $2`,
+    select_remind_targets: `select * from ${tn} where ${tc.rdt} = $1 and ${tc.snt} = false order by ${tc.usr}`,
+    sent: `update ${tn} set ${tc.snt} = true where ${tc.id} = $1 and ${tc.usr} = $2`,
 };
 
 export class ReminderDBService {
@@ -36,6 +38,22 @@ export class ReminderDBService {
 
     public selectAll = async (usr: string): Promise<ReminderRow[]> => {
         return await this.run(sql.select_list, [usr])
+            .then(qr => {
+                let result: ReminderRow[] = [];
+                qr.rows.map(row => {
+                    result.push({
+                        id: row.id,
+                        usr: row.line_user,
+                        cnt: row.content,
+                        rdt: row.remind_datetime,
+                    });
+                });
+                return result;
+            });
+    }
+
+    public selectRemindTargets = async (dt: string): Promise<ReminderRow[]> => {
+        return await this.run(sql.select_remind_targets, [dt])
             .then(qr => {
                 let result: ReminderRow[] = [];
                 qr.rows.map(row => {
@@ -86,5 +104,9 @@ export class ReminderDBService {
 
     public delete = async (id: string, usr: string): Promise<QueryResult> => {
         return await this.run(sql.delete, [id, usr]);
+    }
+
+    public sent = async (id: string, usr: string): Promise<QueryResult> => {
+        return await this.run(sql.sent, [id, usr]);
     }
 }

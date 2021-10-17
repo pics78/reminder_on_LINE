@@ -3,15 +3,18 @@ import { LINEConfig } from '../services/lineConnectService';
 import { StatusMgr, Status, StatusDef, StoreConfig } from '../services/statusService';
 import { MessageEventHandler } from './message';
 import { PostbackEventHandler } from './postback';
+import { SchedulerHandler } from './scheduler';
 import { WebhookEventForReminder, isMessageEventForReminder, isPostbackEventForReminder } from './def/types';
 
 export class EventHandler {
     private messageEventHandler: MessageEventHandler;
     private postbackEventHandler: PostbackEventHandler;
+    private schedulerHandler: SchedulerHandler;
     private statusMgr: StatusMgr;
     constructor(storeConfig: StoreConfig, dbConfig: ClientConfig, lineConfig: LINEConfig) {
         this.messageEventHandler = new MessageEventHandler(storeConfig, dbConfig, lineConfig);
         this.postbackEventHandler = new PostbackEventHandler(storeConfig, dbConfig, lineConfig);
+        this.schedulerHandler = new SchedulerHandler(dbConfig, lineConfig);
         this.statusMgr = new StatusMgr(storeConfig);
     }
 
@@ -107,5 +110,9 @@ export class EventHandler {
             default:
                 // For now, do nothing.
         }
+    }
+
+    public remind = async () => {
+        this.schedulerHandler.run();
     }
 }

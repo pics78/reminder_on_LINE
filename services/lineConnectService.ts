@@ -33,6 +33,14 @@ export class LINEService {
         return await this.client.replyMessage(token, message);
     }
 
+    public sendMessage =
+        async (to: string, message: string) => {
+            await this.client.pushMessage(to, {
+                type: 'text',
+                text: message,
+            });
+        }
+
     public replyDatetimePicker =
         async (token: string, quickReplyFlgs?: QuickReplyFlgs, text?: string): Promise<MessageAPIResponseBase> => {
         const minDatetime: string = formatted(getRemindMomentJustAfter(moment()));
