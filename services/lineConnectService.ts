@@ -50,7 +50,7 @@ export class LINEService {
             template: {
                 type: 'buttons',
                 title: 'リマインド日時設定',
-                text: text || '毎時0分から10分間隔で、その時刻から次の処理時刻までの間に設定されたリマインドの処理を行います。',
+                text: text || '毎時0分から5分間隔で、その時刻から次の処理時刻までの間に設定されたリマインドの処理を行います。',
                 actions: [
                     {
                         type: 'datetimepicker',

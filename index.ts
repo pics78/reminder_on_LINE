@@ -4,6 +4,7 @@ import { LINEConfig, lineMiddleware } from './services/lineConnectService';
 import { StoreConfig } from './services/statusService';
 import { WebhookEventForReminder } from './events/def/types';
 import { EventHandler } from './events'
+import { formatted } from './utils/momentUtil';
 
 const storeConfig: StoreConfig = {
     url:    process.env.REDIS_URL,
@@ -33,28 +34,6 @@ app.get('/', (_req: Request, res: Response) => {
     res.send(JSON.stringify({'status': 'OK'}));
 });
 
-app.get('/remind', async (req: Request, res: Response) => {
-    if (req.header('signature') === process.env.scheduler_signature) {
-        try {
-            await eventHandler.remind()
-                .then(() => {
-                    res.status(200).json({
-                        status: 'success'
-                    });
-                });
-        } catch(e: unknown) {
-            console.error(e);
-            res.status(500).json({
-                status: 'error'
-            });
-        }
-    } else {
-        res.status(500).json({
-            status: 'signature error'
-        });
-    }
-});
-
 app.post('/webhook', lineMiddleware(lineConfig), async (req: Request, res: Response) => {
     const events: WebhookEventForReminder[] = req.body.events;
 
@@ -82,4 +61,19 @@ app.post('/webhook', lineMiddleware(lineConfig), async (req: Request, res: Respo
 const PORT = process.env.PORT || process.env.npm_package_config_port;
 app.listen(PORT, () => {
     console.log(`Starting Heroku App.`);
+
+    const cron = require('node-cron');
+    const moment = require('moment');
+    cron.schedule('*/5 * * * *', async () => {
+        try {
+            await eventHandler.remind()
+                .then(() => {
+                    const schedulerRunningTime: string = formatted(moment());
+                    console.log(`[${schedulerRunningTime}]: Scheduler succeeded.`);
+                });
+        } catch(e: unknown) {
+            console.error('Scheduler failed.');
+            console.error(e);
+        }
+    });
 });
