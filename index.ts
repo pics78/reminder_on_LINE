@@ -34,6 +34,12 @@ app.get('/', (_req: Request, res: Response) => {
     res.send(JSON.stringify({'status': 'OK'}));
 });
 
+// HerokuDynoのスリープ防止コール
+app.get('/wakeUp', (_req: Request, res: Response) => {
+    console.log('<<<<< Wake Up Call!! >>>>>');
+    res.send('What? I\'m not sleeping..');
+});
+
 app.post('/webhook', lineMiddleware(lineConfig), async (req: Request, res: Response) => {
     const events: WebhookEventForReminder[] = req.body.events;
 
@@ -60,11 +66,13 @@ app.post('/webhook', lineMiddleware(lineConfig), async (req: Request, res: Respo
 
 const PORT = process.env.PORT || process.env.npm_package_config_port;
 app.listen(PORT, () => {
-    console.log(`Starting Heroku App.`);
+    console.log('Starting Heroku App.');
 
+    const cronStr: string = process.env.CRON;
+    console.log(`Setting remind scheduler with cron [${cronStr}].`);
     const cron = require('node-cron');
     const moment = require('moment');
-    cron.schedule('*/5 * * * *', async () => {
+    cron.schedule(cronStr, async () => {
         try {
             await eventHandler.remind()
                 .then(() => {
