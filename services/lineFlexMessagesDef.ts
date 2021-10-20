@@ -1,4 +1,4 @@
-import { FlexBubble } from '@line/bot-sdk';
+import { FlexBubble, FlexComponent } from '@line/bot-sdk';
 
 export const bubbleForList = (n: number, reminderId: string, content: string, datetime: string): FlexBubble => {
     return {
@@ -214,27 +214,39 @@ export const bubbleToModifyContent = (content: string): FlexBubble => {
     };
 }
 
-export const bubbleToModifyDatetime = (datetime: string, minDatetime: string): FlexBubble => {
+export const bubbleToModifyDatetime = (datetime: string, minDatetime: string, retryFlg: Boolean = false): FlexBubble => {
     return {
         "type": "bubble",
         "size": "kilo",
         "header": {
             "type": "box",
             "layout": "vertical",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "以下のリマインド日時を編集します。",
-                    "weight": "bold",
-                    "size": "xxs"
-                },
-                {
-                    "type": "text",
-                    "text": "新しい日時を選択してください。",
-                    "size": "xxs",
-                    "weight": "bold"
-                }
-            ],
+            "contents": ((): FlexComponent[] =>
+                !retryFlg ?
+                    [
+                        {
+                            "type": "text",
+                            "text": "以下のリマインド日時を編集します。",
+                            "weight": "bold",
+                            "size": "xxs"
+                        },
+                        {
+                            "type": "text",
+                            "text": "新しい日時を選択してください。",
+                            "size": "xxs",
+                            "weight": "bold"
+                        }
+                    ]
+                :
+                    [
+                        {
+                            "type": "text",
+                            "text": "もう一度入力してください。",
+                            "weight": "bold",
+                            "size": "xxs"
+                        }
+                    ]
+            )(),
             "backgroundColor": "#00FF7F",
             "alignItems": "flex-start"
         },

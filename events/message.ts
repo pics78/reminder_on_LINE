@@ -5,7 +5,7 @@ import { LINEService, LINEConfig } from '../services/lineConnectService';
 import { bubbleForList, bubbleToConfirmContent } from '../services/lineFlexMessagesDef';
 import { ReminderDBService } from '../services/dbConnectService';
 import { getDisplayString } from '../utils/momentUtil';
-import { StatusMgr, StatusDef, StoreConfig } from '../services/statusService';
+import { StatusMgr, StoreConfig } from '../services/statusService';
 import { ReminderErrorHandler, ErrorType } from './error';
 
 export class MessageEventHandler {
@@ -20,35 +20,15 @@ export class MessageEventHandler {
         this.errHandler = new ReminderErrorHandler(lineConfig);
     }
 
-    // リマインダー登録開始処理 -> リマインド内容入力状態へ遷移
-    public startRegist = async (event: MessageEventForReminder): Promise<Boolean> => {
-        let status: string|null = await this.statusMgr.getStatus(event.source.userId);
-        // 【ステータス確認】
-        // パターン1: 初めて登録する  -> そのユーザに対応するレコードが存在しない場合
-        // パターン2: 2回目以降の登録 -> ステータスが`StatusDef.none`になっている場合
-        if (status && status !== StatusDef.none) {
-            this.errHandler.handleError(ErrorType.unexpectedStatus, event.replyToken, event.source.userId, status, StatusDef.none);
-            return false;
-        }
+    public startRegist = async (event: MessageEventForReminder) => {
         return await this.line.replyText(
-            event.replyToken, '登録処理を開始します。\nリマインド内容を送信してください。', [ false, true ])
-            .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.settingContent));
+            event.replyToken, '登録処理を開始します。\nリマインド内容を送信してください。', [false, true]);
     }
 
-    // リマインド内容保持 -> リマインド日時選択状態へ遷移
-    public contentReturned = async (event: MessageEventForReminder): Promise<Boolean> => {
-        let status: string = await this.statusMgr.getStatus(event.source.userId)
-            .then(s => s != null ? s : 'null');
-        // 【ステータス確認】
-        // パターン1: ステータスが`StatusDef.settingContent`になっている場合
-        if (status !== StatusDef.settingContent) {
-            this.errHandler.handleError(ErrorType.unexpectedStatus, event.replyToken, event.source.userId, status, StatusDef.settingContent);
-            return false;
-        }
+    public contentReturned = async (event: MessageEventForReminder) => {
         let content: string = event.message.text;
         return await this.statusMgr.setContent(event.source.userId, content)
             .then(() => this.line.replyDatetimePicker(event.replyToken, [true, true]))
-            .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.settingDatetime))
             .catch(e => {
                 console.error(e);
                 return false;
@@ -60,8 +40,7 @@ export class MessageEventHandler {
         let oldContent: string = await this.statusMgr.getContent(event.source.userId);
         return await this.line.replyFlexBubbleMessage(
             event.replyToken, bubbleToConfirmContent(oldContent, newContent))
-            .then(() => this.statusMgr.setContent(event.source.userId, newContent))
-            .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.confirmContent));
+            .then(() => this.statusMgr.setContent(event.source.userId, newContent));
     }
 
     public showList = async (event: MessageEventForReminder): Promise<'OK'|'NG'> => {

@@ -18,97 +18,120 @@ export class EventHandler {
         this.statusMgr = new StatusMgr(storeConfig);
     }
 
+    // ステータスの確認と更新, 処理の分配
     public handle = async (event: WebhookEventForReminder) => {
         const status: Status|null = await this.statusMgr.getStatus(event.source.userId);
 
         switch (status) {
             case StatusDef.none || null:
                 if (isMessageEventForReminder(event)) {
-                    const msg: string = event.message.text;
-                    if (msg === 'set reminder') {
-                        this.messageEventHandler.startRegist(event);
-                    } else if (msg === 'list') {
+                    if (event.message.text === 'set reminder') {
+                        this.messageEventHandler.startRegist(event)
+                            .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.settingContent));
+                    } else if (event.message.text === 'list') {
                         this.messageEventHandler.showList(event);
+                            // No status change
                     }
                 } else if (isPostbackEventForReminder(event)) {
                     if (event.postback.data.match(/^action=modify&id=.*$/)) {
-                        this.postbackEventHandler.modifyReturned(event);
+                        this.postbackEventHandler.modifyReturned(event)
+                            .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.modify))
                     } else if (event.postback.data.match(/^action=delete&id=.*$/)) {
                         this.postbackEventHandler.deleteReturned(event);
+                            // No status change
                     }
                 }
                 break;
             case StatusDef.settingContent:
                 if (isMessageEventForReminder(event)) {
                     if (!event.message.text.match(/^\$.*/)) {
-                        this.messageEventHandler.contentReturned(event);
+                        this.messageEventHandler.contentReturned(event)
+                            .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.settingDatetime));
                     }
                 } else if (isPostbackEventForReminder(event)) {
                     if (event.postback.data === 'action=cancel') {
-                        this.postbackEventHandler.cancelReturned(event);
+                        this.postbackEventHandler.cancelReturned(event)
+                            .then(() => this.statusMgr.reset(event.source.userId));
                     }
                 }
                 break;
             case StatusDef.settingDatetime:
                 if (isPostbackEventForReminder(event)) {
                     if (event.postback.data === 'action=set_remind_datetime') {
-                        this.postbackEventHandler.datetimeReturned(event);
-                    } else if (event.postback.data === 'action=cancel') {
-                        this.postbackEventHandler.cancelReturned(event);
+                        this.postbackEventHandler.datetimeReturned(event)
+                            .then(() => this.statusMgr.reset(event.source.userId));
                     } else if (event.postback.data === 'action=back') {
-                        this.postbackEventHandler.backToContentReturned(event);
+                        this.postbackEventHandler.backToContentReturned(event)
+                            .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.settingContent));
+                    } else if (event.postback.data === 'action=cancel') {
+                        this.postbackEventHandler.cancelReturned(event)
+                            .then(() => this.statusMgr.reset(event.source.userId));
                     }
                 }
                 break;
             case StatusDef.modify:
                 if (isPostbackEventForReminder(event)) {
                     if (event.postback.data === 'action=modify_content') {
-                        this.postbackEventHandler.modifyContentReturned(event);
+                        this.postbackEventHandler.modifyContentReturned(event)
+                            .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.modifyContent));
                     } else if (event.postback.data === 'action=modify_datetime') {
-                        this.postbackEventHandler.modifyDatetimeReturned(event);
+                        this.postbackEventHandler.modifyDatetimeReturned(event)
+                            .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.modifyDatetime));
                     } else if (event.postback.data === 'action=cancel') {
-                        this.postbackEventHandler.cancelReturned(event);
+                        this.postbackEventHandler.cancelReturned(event)
+                            .then(() => this.statusMgr.reset(event.source.userId));
                     }
                 }
                 break;
             case StatusDef.modifyContent:
                 if (isMessageEventForReminder(event)) {
                     if (!event.message.text.match(/^\$.*/)) {
-                        this.messageEventHandler.newContentReturned(event);
+                        this.messageEventHandler.newContentReturned(event)
+                            .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.confirmContent));
                     }
                 } else if (isPostbackEventForReminder(event)) {
                     if (event.postback.data === 'action=cancel') {
-                        this.postbackEventHandler.cancelReturned(event);
+                        this.postbackEventHandler.cancelReturned(event)
+                            .then(() => this.statusMgr.reset(event.source.userId));
                     }
                 }
                 break;
             case StatusDef.modifyDatetime:
                 if (isPostbackEventForReminder(event)) {
                     if (event.postback.data === 'action=modify_remind_datetime') {
-                        this.postbackEventHandler.newDatetimeReturned(event);
+                        this.postbackEventHandler.newDatetimeReturned(event)
+                            .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.confirmDatetime));
                     } else if (event.postback.data === 'action=cancel') {
-                        this.postbackEventHandler.cancelReturned(event);
+                        this.postbackEventHandler.cancelReturned(event)
+                            .then(() => this.statusMgr.reset(event.source.userId));
                     }
                 }
                 break;
             case StatusDef.confirmContent:
                 if (isPostbackEventForReminder(event)) {
                     if (event.postback.data === 'action=confirm_content') {
-                        this.postbackEventHandler.confirmContentReturned(event);
+                        this.postbackEventHandler.confirmContentReturned(event)
+                            .then(() => this.statusMgr.reset(event.source.userId));
                     } else if (event.postback.data === 'action=retry_content') {
+                        this.postbackEventHandler.retryContent(event)
+                            .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.modifyContent));
                     }
                 }
                 break;
             case StatusDef.confirmDatetime:
                 if (isPostbackEventForReminder(event)) {
                     if (event.postback.data === 'action=confirm_datetime') {
-                        this.postbackEventHandler.confirmDatetimeReturned(event);
+                        this.postbackEventHandler.confirmDatetimeReturned(event)
+                            .then(() => this.statusMgr.reset(event.source.userId));
                     } else if (event.postback.data === 'action=retry_datetime') {
+                        this.postbackEventHandler.retryDatetime(event)
+                            .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.modifyDatetime));
                     }
-                    break;
                 }
+                break;
             default:
                 // For now, do nothing.
+                // status error
         }
     }
 
