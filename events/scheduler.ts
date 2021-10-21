@@ -1,17 +1,14 @@
-import { ClientConfig } from 'pg';
-import { LINEService, LINEConfig } from '../services/lineConnectService';
+import { LINEService } from '../services/lineConnectService';
 import { ReminderDBService } from '../services/dbConnectService';
-import { StatusMgr, StoreConfig } from '../services/statusService';
 import { getRemindMomentJustBefore, formatted } from '../utils/momentUtil'
 import moment from 'moment';
-import { resolve } from 'path/posix';
 
 export class SchedulerHandler {
     private db: ReminderDBService;
     private line: LINEService;
-    constructor(dbConfig: ClientConfig, lineConfig: LINEConfig) {
-        this.db = new ReminderDBService(dbConfig);
-        this.line = new LINEService(lineConfig);
+    constructor() {
+        this.db = new ReminderDBService();
+        this.line = new LINEService();
     }
 
     public run = async () => {

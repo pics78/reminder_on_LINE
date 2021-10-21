@@ -30,15 +30,11 @@ export class StatusDef {
 export declare type DataType =
     'content' | 'datetime' | 'target';
 
-export interface StoreConfig {
-    url: string
-}
-
 export class StatusMgr {
     private redis: Redis.Redis;
 
-    constructor(config: StoreConfig) {
-        this.redis = new Redis(config.url);
+    constructor() {
+        this.redis = new Redis(process.env.REDIS_URL);
     }
 
     public statusKey = (userId: string): string => {

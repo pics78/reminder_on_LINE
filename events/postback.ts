@@ -1,24 +1,21 @@
-import { PostbackEventForReminder, WebhookEventForReminder } from './def/types';
+import { PostbackEventForReminder } from './def/types';
 import { LINE_REQUEST_ID_HTTP_HEADER_NAME } from '@line/bot-sdk';
-import { ClientConfig } from 'pg';
 import { LINEService, LINEConfig } from '../services/lineConnectService';
 import { bubbleToConfirmDatetime, bubbleToCreateRemind, bubbleToModifyContent, bubbleToModifyDatetime, bubbleToSelect } from '../services/lineFlexMessagesDef';
 import { ReminderDBService } from '../services/dbConnectService';
-import { StatusMgr, StatusDef, Status, StoreConfig } from '../services/statusService';
+import { StatusMgr } from '../services/statusService';
 import moment, { Moment } from 'moment';
 import { getRemindMomentJustAfter, getRemindMomentJustBefore, formatted, getDisplayString } from '../utils/momentUtil'
-import { ReminderErrorHandler, ErrorType } from './error';
+import { ReminderErrorHandler } from './error';
 
 export class PostbackEventHandler {
     private statusMgr: StatusMgr;
     private db: ReminderDBService;
     private line: LINEService;
-    private errHandler: ReminderErrorHandler;
-    constructor(storeConfig: StoreConfig, dbConfig: ClientConfig, lineConfig: LINEConfig) {
-        this.statusMgr = new StatusMgr(storeConfig);
-        this.db = new ReminderDBService(dbConfig);
-        this.line = new LINEService(lineConfig);
-        this.errHandler = new ReminderErrorHandler(lineConfig);
+    constructor() {
+        this.statusMgr = new StatusMgr();
+        this.db = new ReminderDBService();
+        this.line = new LINEService();
     }
 
     public datetimeReturned = async (event: PostbackEventForReminder): Promise<Boolean> => {

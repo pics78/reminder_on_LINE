@@ -1,33 +1,10 @@
 import { Express, Request, Response } from 'express';
-import { ClientConfig } from 'pg';
-import { LINEConfig, lineMiddleware } from './services/lineConnectService';
-import { StoreConfig } from './services/statusService';
+import { lineMiddleware } from './services/lineConnectService';
 import { WebhookEventForReminder } from './events/def/types';
 import { EventHandler } from './events'
 import { formatted } from './utils/momentUtil';
 
-const storeConfig: StoreConfig = {
-    url:    process.env.REDIS_URL,
-}
-
-const dbConfig: ClientConfig = {
-    host:       process.env.POSTGRESQL_HOST,
-    database:   process.env.POSTGRESQL_DATABASE,
-    user:       process.env.POSTGRESQL_USER,
-    port:       process.env.POSTGRESQL_PORT,
-    password:   process.env.POSTGRESQL_PASS,
-    ssl:        { rejectUnauthorized: false },
-}
-
-const lineConfig: LINEConfig = {
-    channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
-    channelSecret:      process.env.LINE_CHANNEL_SECRET,
-}
-
-const eventHandler: EventHandler = new EventHandler(
-    storeConfig, dbConfig, lineConfig
-);
-
+const eventHandler: EventHandler = new EventHandler();
 const app: Express = require('express')();
 
 app.get('/', (_req: Request, res: Response) => {
@@ -40,7 +17,7 @@ app.get('/wakeUp', (_req: Request, res: Response) => {
     res.send('What? I\'m not sleeping..');
 });
 
-app.post('/webhook', lineMiddleware(lineConfig), async (req: Request, res: Response) => {
+app.post('/webhook', lineMiddleware(), async (req: Request, res: Response) => {
     const events: WebhookEventForReminder[] = req.body.events;
 
     await Promise.all(
@@ -64,14 +41,15 @@ app.post('/webhook', lineMiddleware(lineConfig), async (req: Request, res: Respo
     });
 });
 
+const cron = require('node-cron');
+const moment = require('moment');
+
 const PORT = process.env.PORT || process.env.npm_package_config_port;
 app.listen(PORT, () => {
     console.log('Starting Heroku App.');
 
     const cronStr: string = process.env.CRON;
     console.log(`Setting remind scheduler with cron [${cronStr}].`);
-    const cron = require('node-cron');
-    const moment = require('moment');
     cron.schedule(cronStr, async () => {
         try {
             await eventHandler.remind()

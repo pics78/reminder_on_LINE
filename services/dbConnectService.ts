@@ -16,8 +16,15 @@ const sql = {
 export class ReminderDBService {
     private pool: Pool;
 
-    constructor(config: ClientConfig) {
-        this.pool = new Pool(config);
+    constructor() {
+        this.pool = new Pool({
+            host:       process.env.POSTGRESQL_HOST,
+            database:   process.env.POSTGRESQL_DATABASE,
+            user:       process.env.POSTGRESQL_USER,
+            port:       process.env.POSTGRESQL_PORT,
+            password:   process.env.POSTGRESQL_PASS,
+            ssl:        { rejectUnauthorized: false },
+        });
     }
 
     public run = async (query: string, values: any[]): Promise<QueryResult> => {

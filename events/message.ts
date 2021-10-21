@@ -1,23 +1,19 @@
 import { MessageEventForReminder } from './def/types';
 import { LINE_REQUEST_ID_HTTP_HEADER_NAME, FlexBubble } from '@line/bot-sdk';
-import { ClientConfig } from 'pg';
-import { LINEService, LINEConfig } from '../services/lineConnectService';
+import { LINEService } from '../services/lineConnectService';
 import { bubbleForList, bubbleToConfirmContent } from '../services/lineFlexMessagesDef';
 import { ReminderDBService } from '../services/dbConnectService';
 import { getDisplayString } from '../utils/momentUtil';
-import { StatusMgr, StoreConfig } from '../services/statusService';
-import { ReminderErrorHandler, ErrorType } from './error';
+import { StatusMgr } from '../services/statusService';
 
 export class MessageEventHandler {
     private statusMgr: StatusMgr;
     private db: ReminderDBService;
     private line: LINEService;
-    private errHandler: ReminderErrorHandler;
-    constructor(storeConfig: StoreConfig, dbConfig: ClientConfig, lineConfig: LINEConfig) {
-        this.statusMgr = new StatusMgr(storeConfig);
-        this.db = new ReminderDBService(dbConfig);
-        this.line = new LINEService(lineConfig);
-        this.errHandler = new ReminderErrorHandler(lineConfig);
+    constructor() {
+        this.statusMgr = new StatusMgr();
+        this.db = new ReminderDBService();
+        this.line = new LINEService();
     }
 
     public startRegist = async (event: MessageEventForReminder) => {

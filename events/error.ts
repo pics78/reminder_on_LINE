@@ -7,8 +7,8 @@ export const ErrorType = {
 
 export class ReminderErrorHandler {
     private line: LINEService;
-    constructor(config: LINEConfig) {
-        this.line = new LINEService(config);
+    constructor() {
+        this.line = new LINEService();
     }
 
     public handleError = async (type: string, token: string, userId?: string, status?: string, expectedStatus?: string) => {

@@ -7,18 +7,23 @@ export interface LINEConfig extends ClientConfig, MiddlewareConfig {
     channelSecret: string;
 }
 
+const lineConfig: LINEConfig = {
+    channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+    channelSecret:      process.env.LINE_CHANNEL_SECRET,
+};
+
 export declare type QuickReplyFlgs = [
     backToContentFlg: Boolean, cancelFlg: Boolean
 ];
 
-export const lineMiddleware = (config: LINEConfig) => {
-    return middleware(config);
+export const lineMiddleware = () => {
+    return middleware(lineConfig);
 }
 
 export class LINEService {
     private client: Client;
-    constructor(config: LINEConfig) {
-        this.client = new Client(config);
+    constructor() {
+        this.client = new Client(lineConfig);
     }
 
     public replyText =

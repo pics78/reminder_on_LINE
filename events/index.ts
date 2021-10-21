@@ -1,6 +1,4 @@
-import { ClientConfig } from 'pg';
-import { LINEConfig } from '../services/lineConnectService';
-import { StatusMgr, Status, StatusDef, StoreConfig } from '../services/statusService';
+import { StatusMgr, Status, StatusDef } from '../services/statusService';
 import { MessageEventHandler } from './message';
 import { PostbackEventHandler } from './postback';
 import { SchedulerHandler } from './scheduler';
@@ -11,11 +9,11 @@ export class EventHandler {
     private postbackEventHandler: PostbackEventHandler;
     private schedulerHandler: SchedulerHandler;
     private statusMgr: StatusMgr;
-    constructor(storeConfig: StoreConfig, dbConfig: ClientConfig, lineConfig: LINEConfig) {
-        this.messageEventHandler = new MessageEventHandler(storeConfig, dbConfig, lineConfig);
-        this.postbackEventHandler = new PostbackEventHandler(storeConfig, dbConfig, lineConfig);
-        this.schedulerHandler = new SchedulerHandler(dbConfig, lineConfig);
-        this.statusMgr = new StatusMgr(storeConfig);
+    constructor() {
+        this.messageEventHandler = new MessageEventHandler();
+        this.postbackEventHandler = new PostbackEventHandler();
+        this.schedulerHandler = new SchedulerHandler();
+        this.statusMgr = new StatusMgr();
     }
 
     // ステータスの確認と更新, 処理の分配
