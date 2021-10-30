@@ -1,12 +1,12 @@
 import { PostbackEventForReminder } from './def/types';
 import { LINE_REQUEST_ID_HTTP_HEADER_NAME } from '@line/bot-sdk';
-import { LINEService, LINEConfig } from '../services/lineConnectService';
+import { LINEService } from '../services/lineConnectService';
 import { bubbleToConfirmDatetime, bubbleToCreateRemind, bubbleToModifyContent, bubbleToModifyDatetime, bubbleToSelect } from '../services/lineFlexMessagesDef';
 import { ReminderDBService } from '../services/dbConnectService';
 import { StatusMgr } from '../services/statusService';
 import moment, { Moment } from 'moment';
-import { getRemindMomentJustAfter, getRemindMomentJustBefore, formatted, getDisplayString } from '../utils/momentUtil'
-import { ReminderErrorHandler } from './error';
+
+const mu = require('../utils/momentUtil');
 
 export class PostbackEventHandler {
     private statusMgr: StatusMgr;
@@ -19,15 +19,15 @@ export class PostbackEventHandler {
     }
 
     public datetimeReturned = async (event: PostbackEventForReminder): Promise<Boolean> => {
-        let selectedMoment: Moment = getRemindMomentJustBefore(moment(event.postback.params.datetime));
-        let nextRemindMoment: Moment = getRemindMomentJustAfter(moment());
+        let selectedMoment: Moment = mu.getRemindMomentJustBefore(moment(event.postback.params.datetime));
+        let nextRemindMoment: Moment = mu.getRemindMomentJustAfter(moment());
         if (selectedMoment.isSameOrAfter(nextRemindMoment)) {
             let remindContent: string = await this.statusMgr.getContent(event.source.userId);
-            let remindDatetime: string = formatted(selectedMoment);
+            let remindDatetime: string = mu.formatted(selectedMoment);
             return await this.db
                 .insert(event.source.userId, remindContent, remindDatetime)
                 .then(() => this.line.replyFlexBubbleMessage(
-                    event.replyToken, bubbleToCreateRemind(remindContent, getDisplayString(remindDatetime)), '登録完了'))
+                    event.replyToken, bubbleToCreateRemind(remindContent, mu.getDisplayString(new Date(remindDatetime))), '登録完了'))
                 .then(r => {
                     if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
                         return true;
@@ -59,14 +59,14 @@ export class PostbackEventHandler {
     }
 
     public newDatetimeReturned = async (event: PostbackEventForReminder): Promise<Boolean> => {
-        let selectedMoment: Moment = getRemindMomentJustBefore(moment(event.postback.params.datetime));
-        let nextRemindMoment: Moment = getRemindMomentJustAfter(moment());
+        let selectedMoment: Moment = mu.getRemindMomentJustBefore(moment(event.postback.params.datetime));
+        let nextRemindMoment: Moment = mu.getRemindMomentJustAfter(moment());
         if (selectedMoment.isSameOrAfter(nextRemindMoment)) {
             let oldDatetime: string = await this.statusMgr.getDatetime(event.source.userId);
             return await this.line.replyFlexBubbleMessage(
                 event.replyToken, bubbleToConfirmDatetime(
-                    getDisplayString(oldDatetime), getDisplayString(selectedMoment)))
-                .then(() => this.statusMgr.setDatetime(event.source.userId, formatted(selectedMoment)));
+                    mu.getDisplayString(new Date(oldDatetime)), mu.getDisplayString(selectedMoment)))
+                .then(() => this.statusMgr.setDatetime(event.source.userId, mu.formatted(selectedMoment)));
         } else {
             return await this.line.replyDatetimePicker(event.replyToken, [false, true],
                 '指定日時が早すぎます。もう一度選択してください。')
@@ -141,11 +141,11 @@ export class PostbackEventHandler {
         let target: string = await this.statusMgr.getTarget(event.source.userId);
         let datetime: string = await this.db.selectById(target)
             .then(row => row ? row.rdt : '(日時の取得に失敗しました)');
-        let minDatetime: string = formatted(getRemindMomentJustAfter(moment()));
+        let minDatetime: string = mu.formatted(mu.getRemindMomentJustAfter(moment()));
         return await this.statusMgr.setDatetime(event.source.userId, datetime)
             .then(() => this.line.replyFlexBubbleMessage(
                 event.replyToken,
-                bubbleToModifyDatetime(getDisplayString(datetime), minDatetime),
+                bubbleToModifyDatetime(mu.getDisplayString(new Date(datetime)), minDatetime),
                 '日時編集',
                 [false, true]
             ))
@@ -216,10 +216,10 @@ export class PostbackEventHandler {
 
     public retryDatetime = async (event: PostbackEventForReminder): Promise<Boolean> => {
         let datetime: string = await this.statusMgr.getDatetime(event.source.userId);
-        let minDatetime: string = formatted(getRemindMomentJustAfter(moment()));
+        let minDatetime: string = mu.formatted(mu.getRemindMomentJustAfter(moment()));
         return await this.line.replyFlexBubbleMessage(
                 event.replyToken,
-                bubbleToModifyDatetime(getDisplayString(datetime), minDatetime, true),
+                bubbleToModifyDatetime(mu.getDisplayString(new Date(datetime)), minDatetime, true),
                 '日時編集',
                 [false, true]
             )

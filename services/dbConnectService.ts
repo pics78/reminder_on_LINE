@@ -1,4 +1,4 @@
-import { Pool, PoolClient, ClientConfig, QueryResult } from 'pg';
+import { Pool, PoolClient, QueryResult } from 'pg';
 import { tn, tc, ReminderRow } from './sql';
 import { getId } from '../utils/idUtil';
 

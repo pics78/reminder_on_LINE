@@ -133,7 +133,7 @@ export class EventHandler {
         }
     }
 
-    public remind = async () => {
-        this.schedulerHandler.run();
+    public remind = async (): Promise<string> => {
+        return this.schedulerHandler.run();
     }
 }

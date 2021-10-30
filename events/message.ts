@@ -3,8 +3,9 @@ import { LINE_REQUEST_ID_HTTP_HEADER_NAME, FlexBubble } from '@line/bot-sdk';
 import { LINEService } from '../services/lineConnectService';
 import { bubbleForList, bubbleToConfirmContent } from '../services/lineFlexMessagesDef';
 import { ReminderDBService } from '../services/dbConnectService';
-import { getDisplayString } from '../utils/momentUtil';
 import { StatusMgr } from '../services/statusService';
+
+const mu = require('../utils/momentUtil');
 
 export class MessageEventHandler {
     private statusMgr: StatusMgr;
@@ -46,7 +47,7 @@ export class MessageEventHandler {
                 let n: number = 1;
                 if (rr.length > 0) {
                     rr.map(row => {
-                        bubbles.push(bubbleForList(n, row.id, row.cnt, getDisplayString(row.rdt)));
+                        bubbles.push(bubbleForList(n, row.id, row.cnt, mu.getDisplayString(row.rdt)));
                         n++;
                     });
                     return this.line.replyFlexCarouselMessages(event.replyToken, bubbles);

@@ -2,14 +2,11 @@ import { Express, Request, Response } from 'express';
 import { lineMiddleware } from './services/lineConnectService';
 import { WebhookEventForReminder } from './events/def/types';
 import { EventHandler } from './events'
-import { formatted } from './utils/momentUtil';
+
+const cron = require('node-cron');
 
 const eventHandler: EventHandler = new EventHandler();
 const app: Express = require('express')();
-
-app.get('/', (_req: Request, res: Response) => {
-    res.send(JSON.stringify({'status': 'OK'}));
-});
 
 // HerokuDynoのスリープ防止コール
 app.get('/wakeUp', (_req: Request, res: Response) => {
@@ -23,7 +20,6 @@ app.post('/webhook', lineMiddleware(), async (req: Request, res: Response) => {
     await Promise.all(
         events.map(async (event: WebhookEventForReminder) => {
             try {
-                console.log(JSON.stringify(event));
                 await eventHandler.handle(event);
             } catch (err: unknown) {
                 throw err;
@@ -41,9 +37,6 @@ app.post('/webhook', lineMiddleware(), async (req: Request, res: Response) => {
     });
 });
 
-const cron = require('node-cron');
-const moment = require('moment');
-
 const PORT = process.env.PORT || process.env.npm_package_config_port;
 app.listen(PORT, () => {
     console.log('Starting Heroku App.');
@@ -53,9 +46,8 @@ app.listen(PORT, () => {
     cron.schedule(cronStr, async () => {
         try {
             await eventHandler.remind()
-                .then(() => {
-                    const schedulerRunningTime: string = formatted(moment());
-                    console.log(`[${schedulerRunningTime}]: Scheduler succeeded.`);
+                .then(dt /*(scheduler running time)*/ => {
+                    console.log(`[${dt}]: Scheduler succeeded.`);
                 });
         } catch(e: unknown) {
             console.error('Scheduler failed.');

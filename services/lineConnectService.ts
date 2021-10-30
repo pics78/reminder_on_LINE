@@ -1,6 +1,7 @@
 import { Client, ClientConfig, middleware, MiddlewareConfig, MessageAPIResponseBase, Message, QuickReply, QuickReplyItem, FlexBubble } from '@line/bot-sdk';
-import { getRemindMomentJustAfter, formatted } from '../utils/momentUtil'
 import moment from 'moment';
+
+const mu = require('../utils/momentUtil');
 
 export interface LINEConfig extends ClientConfig, MiddlewareConfig {
     channelAccessToken: string;
@@ -48,7 +49,7 @@ export class LINEService {
 
     public replyDatetimePicker =
         async (token: string, quickReplyFlgs?: QuickReplyFlgs, text?: string): Promise<MessageAPIResponseBase> => {
-        const minDatetime: string = formatted(getRemindMomentJustAfter(moment()));
+        const minDatetime: string = mu.formatted(mu.getRemindMomentJustAfter(moment()));
         let message: Message = {
             type: 'template',
             altText: '日時選択',

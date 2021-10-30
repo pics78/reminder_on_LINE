@@ -1,7 +1,9 @@
 import { LINEService } from '../services/lineConnectService';
 import { ReminderDBService } from '../services/dbConnectService';
-import { getRemindMomentJustBefore, formatted } from '../utils/momentUtil'
+import { ReminderRow } from '../services/sql';
 import moment from 'moment';
+
+const mu = require('../utils/momentUtil');
 
 export class SchedulerHandler {
     private db: ReminderDBService;
@@ -11,23 +13,23 @@ export class SchedulerHandler {
         this.line = new LINEService();
     }
 
-    public run = async () => {
-        const dt: string = formatted(getRemindMomentJustBefore(moment()));
-        await this.db.selectRemindTargets(dt)
-            .then(rrs => {
-                let targetUser = '';
-                rrs.map(rr => {
-                    new Promise(resolve => {
-                        if (rr.usr !== targetUser) {
-                            targetUser = rr.usr;
-                            resolve(this.line.sendMessage(rr.usr, 'リマインドをお知らせします。'));
-                        } else {
-                            resolve(null);
-                        }
-                    })
-                    .then(() => this.line.sendMessage(rr.usr, rr.cnt))
-                    .then(() => this.db.sent(rr.id, rr.usr));
-                });
-            });
+    public run = async (): Promise<string> => {
+        const dt: string = mu.formatted(
+            mu.getRemindMomentJustBefore(moment()));
+        let targets: ReminderRow[] = await this.db.selectRemindTargets(dt);
+        let length = targets.length;
+        if (length) {
+            console.log(`[Scheduler.run]: The number of target reminders: ${length}`);
+            return await Promise.all(
+                targets.map(async (remind: ReminderRow) => {
+                    await this.line.sendMessage(remind.usr, remind.cnt)
+                        .then(() => this.db.sent(remind.id, remind.usr));
+                })
+            )
+            .then(() => dt);
+        } else {
+            console.log('[Scheduler.run]: No target reminders.');
+            return dt;
+        }
     }
 }
