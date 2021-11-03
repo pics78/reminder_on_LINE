@@ -2,6 +2,15 @@ import { Pool, PoolClient, QueryResult } from 'pg';
 import { tn, tc, ReminderRow } from './sql';
 import { getId } from '../utils/idUtil';
 
+const pool = new Pool({
+    host:       process.env.POSTGRESQL_HOST,
+    database:   process.env.POSTGRESQL_DATABASE,
+    user:       process.env.POSTGRESQL_USER,
+    port:       process.env.POSTGRESQL_PORT,
+    password:   process.env.POSTGRESQL_PASS,
+    ssl:        { rejectUnauthorized: false },
+});
+
 const sql = {
     select_list: `select * from ${tn} where line_user = $1 and ${tc.snt} = false`,
     select: `select * from ${tn} where ${tc.id} = $1 and ${tc.snt} = false`,
@@ -14,33 +23,12 @@ const sql = {
 };
 
 export class ReminderDBService {
-    private pool: Pool;
-
-    constructor() {
-        this.pool = new Pool({
-            host:       process.env.POSTGRESQL_HOST,
-            database:   process.env.POSTGRESQL_DATABASE,
-            user:       process.env.POSTGRESQL_USER,
-            port:       process.env.POSTGRESQL_PORT,
-            password:   process.env.POSTGRESQL_PASS,
-            ssl:        { rejectUnauthorized: false },
-        });
-    }
+    constructor() {}
 
     public run = async (query: string, values: any[]): Promise<QueryResult> => {
-        return new Promise(resolve => {
-            this.pool.connect((connectError: Error, poolClient: PoolClient) => {
-                if (connectError) throw connectError;
-                else {
-                    poolClient.query(query, values, (queryError: Error, queryResult: QueryResult<any>) => {
-                        if (queryError) throw queryError;
-                        else {
-                            resolve(queryResult);
-                        }
-                    });
-                }
-            });
-        });
+        const client: PoolClient = await pool.connect();
+        return client.query(query, values)
+            .finally(() => client.release(true));
     }
 
     public selectAll = async (usr: string): Promise<ReminderRow[]> => {
@@ -94,7 +82,7 @@ export class ReminderDBService {
 
     public checkNumberOfRegist = async (usr: string): Promise<number> => {
         return await this.run(sql.select_list, [usr])
-        .then(qr => qr.rowCount);
+            .then(qr => qr.rowCount);
     }
 
     public insert = async (usr: string, cnt: string, rdt: string): Promise<QueryResult> => {
