@@ -8,6 +8,7 @@ declare global {
             POSTGRESQL_PASS:            string;
             LINE_CHANNEL_ACCESS_TOKEN:  string;
             LINE_CHANNEL_SECRET:        string;
+            LINE_ADMIN_USER_ID:         string;
             REDIS_URL:                  string;
             CRON:                       string;
         }
