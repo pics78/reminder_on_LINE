@@ -1,5 +1,4 @@
 import { PostbackEventForReminder } from './def/types';
-import { LINE_REQUEST_ID_HTTP_HEADER_NAME } from '@line/bot-sdk';
 import { LINEService } from '../services/lineConnectService';
 import { bubbleToConfirmDatetime, bubbleToCreateRemind, bubbleToModifyContent, bubbleToModifyDatetime, bubbleToSelect } from '../services/lineFlexMessagesDef';
 import { ReminderDBService } from '../services/dbConnectService';
@@ -21,47 +20,25 @@ export class PostbackEventHandler {
     public datetimeReturned = async (event: PostbackEventForReminder): Promise<Boolean> => {
         let selectedMoment: Moment = mu.getRemindMomentJustBefore(moment(event.postback.params.datetime));
         let nextRemindMoment: Moment = mu.getRemindMomentJustAfter(moment());
-        if (selectedMoment.isSameOrAfter(nextRemindMoment)) {
+        if (selectedMoment.isSameOrAfter(nextRemindMoment, 'minutes')) {
             let remindContent: string = await this.statusMgr.getContent(event.source.userId);
             let remindDatetime: string = mu.formatted(selectedMoment);
             return await this.db
                 .insert(event.source.userId, remindContent, remindDatetime)
                 .then(() => this.line.replyFlexBubbleMessage(
-                    event.replyToken, bubbleToCreateRemind(remindContent, mu.getDisplayString(new Date(remindDatetime))), '登録完了'))
-                .then(r => {
-                    if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
-                        return true;
-                    } else {
-                        return false;
-                    }
-                })
-                .catch(e => {
-                    console.error(e);
-                    return false;
-                });
+                    event.replyToken, bubbleToCreateRemind(remindContent, mu.getDisplayString(remindDatetime)), '登録完了'))
+                .then(() => true)
         } else {
-            // invalid datetime
-            // retry DatetimePicker
             return await this.line.replyDatetimePicker(event.replyToken, [true, true],
                 '指定日時が早すぎます。もう一度選択してください。')
-                .then(r => {
-                    if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
-                        return true;
-                    } else {
-                        return false;
-                    }
-                })
-                .catch(e => {
-                    console.error(e);
-                    return false;
-                });
+                .then(() => false)
         }
     }
 
     public newDatetimeReturned = async (event: PostbackEventForReminder): Promise<Boolean> => {
         let selectedMoment: Moment = mu.getRemindMomentJustBefore(moment(event.postback.params.datetime));
         let nextRemindMoment: Moment = mu.getRemindMomentJustAfter(moment());
-        if (selectedMoment.isSameOrAfter(nextRemindMoment)) {
+        if (selectedMoment.isSameOrAfter(nextRemindMoment, 'minutes')) {
             let oldDatetime: string = await this.statusMgr.getDatetime(event.source.userId);
             return await this.line.replyFlexBubbleMessage(
                 event.replyToken, bubbleToConfirmDatetime(
@@ -70,41 +47,19 @@ export class PostbackEventHandler {
         } else {
             return await this.line.replyDatetimePicker(event.replyToken, [false, true],
                 '指定日時が早すぎます。もう一度選択してください。')
-                .then(r => {
-                    if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
-                        return true;
-                    } else {
-                        return false;
-                    }
-                })
-                .catch(e => {
-                    console.error(e);
-                    return false;
-                });
+                .then(() => false)
         }
     }
 
     public cancelReturned = async (event: PostbackEventForReminder): Promise<Boolean> => {
         return await this.line.replyText(event.replyToken, '中断しました。')
-            .then(r => {
-                if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
-                    return true;
-                } else {
-                    return false;
-                }
-            });
+            .then(() => true);
     }
 
     public backToContentReturned = async (event: PostbackEventForReminder): Promise<Boolean> => {
         return await this.line.replyText(
                 event.replyToken, '新しいリマインド内容を入力してください。', [false, true])
-            .then(r => {
-                if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
-                    return true;
-                } else {
-                    return false;
-                }
-            });
+            .then(() => true);
     }
 
     public modifyReturned = async (event: PostbackEventForReminder): Promise<Boolean> => {
@@ -112,13 +67,7 @@ export class PostbackEventHandler {
         return await this.statusMgr.setTarget(event.source.userId, target)
             .then(() => this.line.replyFlexBubbleMessage(
                 event.replyToken, bubbleToSelect(), '編集モード選択', [false, true]))
-            .then(r => {
-                if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
-                    return true;
-                } else {
-                    return false;
-                }
-            });
+            .then(() => true);
     }
 
     public modifyContentReturned = async (event: PostbackEventForReminder): Promise<Boolean> => {
@@ -128,13 +77,7 @@ export class PostbackEventHandler {
         return await this.statusMgr.setContent(event.source.userId, content)
             .then(() => this.line.replyFlexBubbleMessage(
                 event.replyToken, bubbleToModifyContent(content), '内容編集', [false, true]))
-            .then(r => {
-                if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
-                    return true;
-                } else {
-                    return false;
-                }
-            });
+            .then(() => true);
     }
 
     public modifyDatetimeReturned = async (event: PostbackEventForReminder): Promise<Boolean> => {
@@ -149,30 +92,14 @@ export class PostbackEventHandler {
                 '日時編集',
                 [false, true]
             ))
-            .then(r => {
-                if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
-                    return true;
-                } else {
-                    return false;
-                }
-            })
-            .catch(e => {
-                console.error(e);
-                return false;
-            });
+            .then(() => true);
     }
 
     public deleteReturned = async (event: PostbackEventForReminder): Promise<Boolean> => {
         let target: string = event.postback.data.replace(/^action=delete&id=(.*)$/, '$1');
         return await this.db.delete(target, event.source.userId)
             .then(() => this.line.replyText(event.replyToken, '削除しました。'))
-            .then(r => {
-                if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
-                    return true;
-                } else {
-                    return false;
-                }
-            });
+            .then(() => true);
     }
 
     public confirmContentReturned = async (event: PostbackEventForReminder): Promise<Boolean> => {
@@ -180,13 +107,7 @@ export class PostbackEventHandler {
         let content: string = await this.statusMgr.getContent(event.source.userId);
         return await this.db.updateContent(content, target)
             .then(() => this.line.replyText(event.replyToken, '更新しました。'))
-            .then(r => {
-                if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
-                    return true;
-                } else {
-                    return false;
-                }
-            });
+            .then(() => true);
     }
 
     public confirmDatetimeReturned = async (event: PostbackEventForReminder): Promise<Boolean> => {
@@ -194,24 +115,12 @@ export class PostbackEventHandler {
         let datetime: string = await this.statusMgr.getDatetime(event.source.userId);
         return await this.db.updateDatetime(datetime, target)
             .then(() => this.line.replyText(event.replyToken, '更新しました。'))
-            .then(r => {
-                if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
-                    return true;
-                } else {
-                    return false;
-                }
-            });
+            .then(() => true);
     }
 
     public retryContent = async (event: PostbackEventForReminder): Promise<Boolean> => {
         return await this.line.replyText(event.replyToken, 'もう一度入力してください。')
-            .then(r => {
-                if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
-                    return true;
-                } else {
-                    return false;
-                }
-            });
+            .then(() => true);
     }
 
     public retryDatetime = async (event: PostbackEventForReminder): Promise<Boolean> => {
@@ -223,16 +132,6 @@ export class PostbackEventHandler {
                 '日時編集',
                 [false, true]
             )
-            .then(r => {
-                if (r[LINE_REQUEST_ID_HTTP_HEADER_NAME]) {
-                    return true;
-                } else {
-                    return false;
-                }
-            })
-            .catch(e => {
-                console.error(e);
-                return false;
-            });
+            .then(() => true);
     }
 }
