@@ -61,7 +61,9 @@ export class EventHandler {
                     if (isPostbackEventForReminder(event)) {
                         if (event.postback.data === 'action=set_remind_datetime') {
                             this.postbackEventHandler.datetimeReturned(event)
-                                .then(r => r ? this.statusMgr.reset(event.source.userId) : null);
+                                .then(isOk => {
+                                    if (isOk) this.statusMgr.reset(event.source.userId);
+                                });
                         } else if (event.postback.data === 'action=back') {
                             this.postbackEventHandler.backToContentReturned(event)
                                 .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.settingContent));
@@ -102,7 +104,9 @@ export class EventHandler {
                     if (isPostbackEventForReminder(event)) {
                         if (event.postback.data === 'action=modify_remind_datetime') {
                             this.postbackEventHandler.newDatetimeReturned(event)
-                                .then(r => r ? this.statusMgr.setStatus(event.source.userId, StatusDef.confirmDatetime) : null);
+                                .then(isOk => {
+                                    if (isOk) this.statusMgr.setStatus(event.source.userId, StatusDef.confirmDatetime);
+                                });
                         } else if (event.postback.data === 'action=cancel') {
                             this.postbackEventHandler.cancelReturned(event)
                                 .then(() => this.statusMgr.reset(event.source.userId));
