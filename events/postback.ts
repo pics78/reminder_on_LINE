@@ -45,9 +45,17 @@ export class PostbackEventHandler {
                     mu.getDisplayString(new Date(oldDatetime)), mu.getDisplayString(selectedMoment)))
                 .then(() => this.statusMgr.setDatetime(event.source.userId, mu.formatted(selectedMoment)));
         } else {
-            return await this.line.replyDatetimePicker(event.replyToken, [false, true],
-                '指定日時が早すぎます。もう一度選択してください。')
-                .then(() => false)
+            let target: string = await this.statusMgr.getTarget(event.source.userId);
+            let datetime: string = await this.db.selectById(target)
+                .then(row => row ? row.rdt : '(日時の取得に失敗しました)');
+            let minDatetime: string = mu.formatted(mu.getRemindMomentJustAfter(moment()));
+            return await this.line.replyFlexBubbleMessage(
+                event.replyToken,
+                bubbleToModifyDatetime(mu.getDisplayString(new Date(datetime)), minDatetime, true),
+                '日時編集',
+                [false, true]
+            )
+            .then(() => false)
         }
     }
 
