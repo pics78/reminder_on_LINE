@@ -52,7 +52,10 @@ export class StatusMgr {
 
     public setData = async (userId: string, type: DataType, data: string): Promise<Boolean> => {
         return this.redis.hset(this.dataKey(userId), type, data)
-            .then(n => n === 1 ? true : false);
+            .then(n => {
+                console.log(`[DEBUG] n: ${n}`);
+                return n === 1 ? true : false;
+            });
     }
 
     public getStatus = async (userId: string): Promise<Status|null> => {

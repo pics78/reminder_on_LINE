@@ -105,6 +105,7 @@ export class EventHandler {
                         if (event.postback.data === 'action=modify_remind_datetime') {
                             this.postbackEventHandler.newDatetimeReturned(event)
                                 .then(isOk => {
+                                    console.log(`[DEBUG] isOk: ${isOk}`);
                                     if (isOk) this.statusMgr.setStatus(event.source.userId, StatusDef.confirmDatetime);
                                 });
                         } else if (event.postback.data === 'action=cancel') {
