@@ -1,11 +1,9 @@
 import { Express, Request, Response } from 'express';
-import { lineMiddleware } from './services/lineConnectService';
+import { lineMiddleware } from './connectors/lineConnector';
 import { WebhookEventForReminder } from './events/def/types';
 import { EventHandler } from './events'
 
 const cron = require('node-cron');
-
-const eventHandler: EventHandler = new EventHandler();
 const app: Express = require('express')();
 
 // HerokuDynoのスリープ防止コール
@@ -20,7 +18,7 @@ app.post('/webhook', lineMiddleware(), async (req: Request, res: Response) => {
     await Promise.all(
         events.map(async (event: WebhookEventForReminder) => {
             try {
-                await eventHandler.handle(event);
+                await EventHandler.handle(event);
             } catch (err: unknown) {
                 throw err;
             }
@@ -45,7 +43,7 @@ app.listen(PORT, () => {
     console.log(`Setting remind scheduler with cron [${cronStr}].`);
     cron.schedule(cronStr, async () => {
         try {
-            await eventHandler.remind()
+            await EventHandler.remind()
                 .then(dt /*(scheduler running time)*/ => {
                     console.log(`[${dt}]: Scheduler succeeded.`);
                 });

@@ -1,45 +1,39 @@
-import { StatusMgr, Status, StatusDef } from '../services/statusService';
-import { MessageEventHandler } from './message';
-import { PostbackEventHandler } from './postback';
-import { SchedulerHandler } from './scheduler';
-import { LINEService } from '../services/lineConnectService';
+import { MessageEventHandler, PostbackEventHandler, SchedulerHandler } from './types';
 import { WebhookEventForReminder, isMessageEventForReminder, isPostbackEventForReminder } from './def/types';
+import { LINEConnector } from '../connectors';
+import { StatusMgr, Status, StatusDef } from '../services';
+import { MessageBuilder } from '../utils/lineMessageBuilder';
+
+const statusMgr = new StatusMgr();
+const line = new LINEConnector();
+const builder = new MessageBuilder();
 
 export class EventHandler {
-    private messageEventHandler: MessageEventHandler;
-    private postbackEventHandler: PostbackEventHandler;
-    private schedulerHandler: SchedulerHandler;
-    private statusMgr: StatusMgr;
-    private line: LINEService;
-    constructor() {
-        this.messageEventHandler = new MessageEventHandler();
-        this.postbackEventHandler = new PostbackEventHandler();
-        this.schedulerHandler = new SchedulerHandler();
-        this.statusMgr = new StatusMgr();
-        this.line = new LINEService();
-    }
+    private constructor() {}
 
     // ステータスの確認と更新, 処理の分配
-    public handle = async (event: WebhookEventForReminder) => {
-        const status: Status|null = await this.statusMgr.getStatus(event.source.userId);
+    static handle = async (event: WebhookEventForReminder) => {
+        const status: Status|null = await statusMgr.getStatus(event.source.userId);
 
         try {
             switch (status) {
                 case StatusDef.none || null:
                     if (isMessageEventForReminder(event)) {
                         if (event.message.text === 'set reminder') {
-                            this.messageEventHandler.startRegist(event)
-                                .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.settingContent));
+                            MessageEventHandler.startRegist(event)
+                                .then(isOk => {
+                                    if (isOk) statusMgr.setStatus(event.source.userId, StatusDef.settingContent);
+                                });
                         } else if (event.message.text === 'list') {
-                            this.messageEventHandler.showList(event);
+                            MessageEventHandler.showList(event);
                                 // No status change
                         }
                     } else if (isPostbackEventForReminder(event)) {
                         if (event.postback.data.match(/^action=modify&id=.*$/)) {
-                            this.postbackEventHandler.modifyReturned(event)
-                                .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.modify));
+                            PostbackEventHandler.modifyReturned(event)
+                                .then(() => statusMgr.setStatus(event.source.userId, StatusDef.modify));
                         } else if (event.postback.data.match(/^action=delete&id=.*$/)) {
-                            this.postbackEventHandler.deleteReturned(event);
+                            PostbackEventHandler.deleteReturned(event);
                                 // No status change
                         }
                     }
@@ -47,112 +41,117 @@ export class EventHandler {
                 case StatusDef.settingContent:
                     if (isMessageEventForReminder(event)) {
                         if (!event.message.text.match(/^\$.*/)) {
-                            this.messageEventHandler.contentReturned(event)
-                                .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.settingDatetime));
+                            MessageEventHandler.contentReturned(event)
+                                .then(() => statusMgr.setStatus(event.source.userId, StatusDef.settingDatetime));
                         }
                     } else if (isPostbackEventForReminder(event)) {
                         if (event.postback.data === 'action=cancel') {
-                            this.postbackEventHandler.cancelReturned(event)
-                                .then(() => this.statusMgr.reset(event.source.userId));
+                            PostbackEventHandler.cancelReturned(event)
+                                .then(() => statusMgr.reset(event.source.userId));
                         }
                     }
                     break;
                 case StatusDef.settingDatetime:
                     if (isPostbackEventForReminder(event)) {
                         if (event.postback.data === 'action=set_remind_datetime') {
-                            this.postbackEventHandler.datetimeReturned(event)
+                            PostbackEventHandler.datetimeReturned(event)
                                 .then(isOk => {
-                                    if (isOk) this.statusMgr.reset(event.source.userId);
+                                    if (isOk) statusMgr.reset(event.source.userId);
                                 });
                         } else if (event.postback.data === 'action=back') {
-                            this.postbackEventHandler.backToContentReturned(event)
-                                .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.settingContent));
+                            PostbackEventHandler.backToContentReturned(event)
+                                .then(() => statusMgr.setStatus(event.source.userId, StatusDef.settingContent));
                         } else if (event.postback.data === 'action=cancel') {
-                            this.postbackEventHandler.cancelReturned(event)
-                                .then(() => this.statusMgr.reset(event.source.userId));
+                            PostbackEventHandler.cancelReturned(event)
+                                .then(() => statusMgr.reset(event.source.userId));
                         }
                     }
                     break;
                 case StatusDef.modify:
                     if (isPostbackEventForReminder(event)) {
                         if (event.postback.data === 'action=modify_content') {
-                            this.postbackEventHandler.modifyContentReturned(event)
-                                .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.modifyContent));
+                            PostbackEventHandler.modifyContentReturned(event)
+                                .then(() => statusMgr.setStatus(event.source.userId, StatusDef.modifyContent));
                         } else if (event.postback.data === 'action=modify_datetime') {
-                            this.postbackEventHandler.modifyDatetimeReturned(event)
-                                .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.modifyDatetime));
+                            PostbackEventHandler.modifyDatetimeReturned(event)
+                                .then(() => statusMgr.setStatus(event.source.userId, StatusDef.modifyDatetime));
                         } else if (event.postback.data === 'action=cancel') {
-                            this.postbackEventHandler.cancelReturned(event)
-                                .then(() => this.statusMgr.reset(event.source.userId));
+                            PostbackEventHandler.cancelReturned(event)
+                                .then(() => statusMgr.reset(event.source.userId));
                         }
                     }
                     break;
                 case StatusDef.modifyContent:
                     if (isMessageEventForReminder(event)) {
                         if (!event.message.text.match(/^\$.*/)) {
-                            this.messageEventHandler.newContentReturned(event)
-                                .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.confirmContent));
+                            MessageEventHandler.newContentReturned(event)
+                                .then(() => statusMgr.setStatus(event.source.userId, StatusDef.confirmContent));
                         }
                     } else if (isPostbackEventForReminder(event)) {
                         if (event.postback.data === 'action=cancel') {
-                            this.postbackEventHandler.cancelReturned(event)
-                                .then(() => this.statusMgr.reset(event.source.userId));
+                            PostbackEventHandler.cancelReturned(event)
+                                .then(() => statusMgr.reset(event.source.userId));
                         }
                     }
                     break;
                 case StatusDef.modifyDatetime:
                     if (isPostbackEventForReminder(event)) {
                         if (event.postback.data === 'action=modify_remind_datetime') {
-                            this.postbackEventHandler.newDatetimeReturned(event)
+                            PostbackEventHandler.newDatetimeReturned(event)
                                 .then(isOk => {
-                                    if (isOk) this.statusMgr.setStatus(event.source.userId, StatusDef.confirmDatetime);
+                                    if (isOk) statusMgr.setStatus(event.source.userId, StatusDef.confirmDatetime);
                                 });
                         } else if (event.postback.data === 'action=cancel') {
-                            this.postbackEventHandler.cancelReturned(event)
-                                .then(() => this.statusMgr.reset(event.source.userId));
+                            PostbackEventHandler.cancelReturned(event)
+                                .then(() => statusMgr.reset(event.source.userId));
                         }
                     }
                     break;
                 case StatusDef.confirmContent:
                     if (isPostbackEventForReminder(event)) {
                         if (event.postback.data === 'action=confirm_content') {
-                            this.postbackEventHandler.confirmContentReturned(event)
-                                .then(() => this.statusMgr.reset(event.source.userId));
+                            PostbackEventHandler.confirmContentReturned(event)
+                                .then(() => statusMgr.reset(event.source.userId));
                         } else if (event.postback.data === 'action=retry_content') {
-                            this.postbackEventHandler.retryContent(event)
-                                .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.modifyContent));
+                            PostbackEventHandler.retryContent(event)
+                                .then(() => statusMgr.setStatus(event.source.userId, StatusDef.modifyContent));
                         }
                     }
                     break;
                 case StatusDef.confirmDatetime:
                     if (isPostbackEventForReminder(event)) {
                         if (event.postback.data === 'action=confirm_datetime') {
-                            this.postbackEventHandler.confirmDatetimeReturned(event)
-                                .then(() => this.statusMgr.reset(event.source.userId));
+                            PostbackEventHandler.confirmDatetimeReturned(event)
+                                .then(() => statusMgr.reset(event.source.userId));
                         } else if (event.postback.data === 'action=retry_datetime') {
-                            this.postbackEventHandler.retryDatetime(event)
-                                .then(() => this.statusMgr.setStatus(event.source.userId, StatusDef.modifyDatetime));
+                            PostbackEventHandler.retryDatetime(event)
+                                .then(() => statusMgr.setStatus(event.source.userId, StatusDef.modifyDatetime));
                         }
                     }
                     break;
                 default:
                     // status error
-                    const userId: string = event.source.userId;
-                    this.line.sendMessage(userId, 'システム内部で不整合が発生しました。入力状態をリセットします。')
-                        .then(() => this.statusMgr.reset(event.source.userId));
+                    await line.replyMessage(event.replyToken, builder.type('text')
+                        .text('システム内部で不整合が発生しました。入力状態をリセットします。')
+                        .build()
+                    )
+                    .then(() => statusMgr.reset(event.source.userId));
                     
-                    this.line.sendMessage(process.env.LINE_ADMIN_USER_ID, `[ERROR]: ${userId}, ステータスエラー`);
+                    await line.sendToAdmin( `[ERROR]: ${event.source.userId}, ステータスエラー`);
             }
         } catch (err: unknown) {
             const userId: string = event.source.userId;
-            this.line.sendMessage(userId, '予期せぬエラーが発生しました。入力状態をリセットします。')
-                .then(() => this.statusMgr.reset(event.source.userId));
+            await line.replyMessage(event.replyToken, builder.type('text')
+                .text('予期せぬエラーが発生しました。入力状態をリセットします。')
+                .build()
+            )
+            .then(() => statusMgr.reset(event.source.userId));
             
-            this.line.sendMessage(process.env.LINE_ADMIN_USER_ID, `[ERROR]: ${userId}, ${err}`);
+            await line.sendToAdmin(`[ERROR]: ${event.source.userId}, ${err}`);
         }
     }
 
-    public remind = async (): Promise<string> => {
-        return this.schedulerHandler.run();
+    static remind = async (): Promise<string> => {
+        return SchedulerHandler.run();
     }
 }

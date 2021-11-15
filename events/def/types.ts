@@ -1,6 +1,6 @@
 import { ReminderEventBase } from './base';
 
-export declare type MessageEventForReminder = {
+export type MessageEventForReminder = {
     type: 'message';
     message: {
         type: 'text';
@@ -8,7 +8,7 @@ export declare type MessageEventForReminder = {
     }
 } & ReminderEventBase;
 
-export declare type PostbackEventForReminder = {
+export type PostbackEventForReminder = {
     type: 'postback';
     postback: {
         data: string;
@@ -18,7 +18,7 @@ export declare type PostbackEventForReminder = {
     }
 } & ReminderEventBase;
 
-export declare type WebhookEventForReminder =
+export type WebhookEventForReminder =
     MessageEventForReminder | PostbackEventForReminder;
 
 export const isMessageEventForReminder = (event: WebhookEventForReminder):
