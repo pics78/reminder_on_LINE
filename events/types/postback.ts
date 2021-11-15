@@ -24,7 +24,7 @@ export class PostbackEventHandler {
             return await line.replyMessage(event.replyToken, builder.type('flex')
                 .altText('登録完了')
                 .contents(lineMsg.bubbleToCreateRemind(remindContent, PrintDt.toDisplay(remindDatetime)))
-                .build(true)
+                .flush(true)
             )
             .then(() => true);
         } else {
@@ -36,7 +36,7 @@ export class PostbackEventHandler {
                 .addAction(lineMsg.setDatetimeAction())
                 .addQuickReply(lineMsg.quickReplyItem('back'))
                 .addQuickReply(lineMsg.quickReplyItem('cancel'))
-                .build(true)
+                .flush(true)
             )
             .then(() => false);
         }
@@ -52,7 +52,7 @@ export class PostbackEventHandler {
                 .altText('日時編集確認')
                 .contents(lineMsg.bubbleToConfirmDatetime(PrintDt.toDisplay(oldDatetime), PrintDt.toDisplay(selected)))
                 .addQuickReply(lineMsg.quickReplyItem('cancel'))
-                .build(true)
+                .flush(true)
             )
             .then(() => true);
         } else {
@@ -65,7 +65,7 @@ export class PostbackEventHandler {
                 .altText('日時編集')
                 .contents(lineMsg.bubbleToModifyDatetime(PrintDt.toDisplay(datetime), minDatetime, true))
                 .addQuickReply(lineMsg.quickReplyItem('cancel'))
-                .build(true)
+                .flush(true)
             )
             .then(() => false);
         }
@@ -74,7 +74,7 @@ export class PostbackEventHandler {
     static cancelReturned = async (event: PostbackEventForReminder): Promise<Boolean> => {
         return await line.replyMessage(event.replyToken, builder.type('text')
             .text('中断しました。')
-            .build()
+            .flush()
         )
         .then(() => true);
     }
@@ -83,7 +83,7 @@ export class PostbackEventHandler {
         return await line.replyMessage(event.replyToken, builder.type('text')
             .text('新しいリマインド内容を入力してください。')
             .addQuickReply(lineMsg.quickReplyItem('cancel'))
-            .build()
+            .flush()
         )
         .then(() => true);
     }
@@ -96,7 +96,7 @@ export class PostbackEventHandler {
             .altText('編集モード選択')
             .contents(lineMsg.bubbleToSelect())
             .addQuickReply(lineMsg.quickReplyItem('cancel'))
-            .build(true)
+            .flush(true)
         )
         .then(() => true);
     }
@@ -111,7 +111,7 @@ export class PostbackEventHandler {
             .altText('内容編集')
             .contents(lineMsg.bubbleToModifyContent(content))
             .addQuickReply(lineMsg.quickReplyItem('cancel'))
-            .build(true)
+            .flush(true)
         )
         .then(() => true);
     }
@@ -127,7 +127,7 @@ export class PostbackEventHandler {
             .altText('日時編集')
             .contents(lineMsg.bubbleToModifyDatetime(PrintDt.toDisplay(datetime), minDatetime))
             .addQuickReply(lineMsg.quickReplyItem('cancel'))
-            .build(true)
+            .flush(true)
             )
             .then(() => true);
     }
@@ -138,7 +138,7 @@ export class PostbackEventHandler {
 
         return await line.replyMessage(event.replyToken, builder.type('text')
             .text('削除しました。')
-            .build()
+            .flush()
         )
         .then(() => true);
     }
@@ -150,7 +150,7 @@ export class PostbackEventHandler {
 
         return await line.replyMessage(event.replyToken, builder.type('text')
             .text('更新しました。')
-            .build()
+            .flush()
         )
         .then(() => true);
     }
@@ -162,7 +162,7 @@ export class PostbackEventHandler {
 
         return await line.replyMessage(event.replyToken, builder.type('text')
             .text('更新しました。')
-            .build()
+            .flush()
         )
         .then(() => true);
     }
@@ -171,7 +171,7 @@ export class PostbackEventHandler {
         return await line.replyMessage(event.replyToken, builder.type('text')
             .text('もう一度入力してください。')
             .addQuickReply(lineMsg.quickReplyItem('cancel'))
-            .build()
+            .flush()
         )
         .then(() => true);
     }
@@ -183,7 +183,7 @@ export class PostbackEventHandler {
             .altText('日時編集')
             .contents(lineMsg.bubbleToModifyDatetime(PrintDt.toDisplay(datetime), minDatetime, true))
             .addQuickReply(lineMsg.quickReplyItem('cancel'))
-            .build(true)
+            .flush(true)
         )
         .then(() => true);
     }

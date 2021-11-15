@@ -71,17 +71,23 @@ export class MessageBuilder {
         }
         return this;
     }
+    public clear = (): this => {
+        this.common = {};
+        return this;
+    }
     public getCommon = (): MessageCommon => {
         return this.common;
     }
 }
 
-declare interface Buildable<T extends Message> {
+interface Buildable<T extends Message> {
     build(forced?: false): T|null;
     build(forced: true): T;
+    flush(forced?: false): T|null;
+    flush(forced: true): T;
 }
 
-declare interface MessageBufInterface {
+interface MessageBufInterface {
     type: string;
 }
 
@@ -130,7 +136,7 @@ class FlexMessageBuf implements MessageBufInterface {
     contents?: FlexContainer; // required
 }
 
-abstract class ClassifiedMessageBuilderBase<T extends MessageBufInterface> {
+class ClassifiedMessageBuilderBase<T extends MessageBufInterface> {
     protected commonBuilder: MessageBuilder;
     protected buf: T;
     constructor(commonBuilder: MessageBuilder, Buf: (new () => T)) {
@@ -147,7 +153,30 @@ abstract class ClassifiedMessageBuilderBase<T extends MessageBufInterface> {
     }
 }
 
-export class TextMessageBuilder extends ClassifiedMessageBuilderBase<TextMessageBuf> implements Buildable<TextMessage> {
+abstract class ClassifiedBuildableMessageBuilderBase<T extends MessageBufInterface, M extends Message> extends ClassifiedMessageBuilderBase<T> implements Buildable<M> {
+    constructor(commonBuilder: MessageBuilder, Buf: (new () => T)) {
+        super(commonBuilder, Buf);
+    }
+
+    abstract build(forced?: false): M|null;
+    abstract build(forced: true): M;
+
+    flush(forced?: false): M|null;
+    flush(forced: true): M;
+
+    public flush(forced?: Boolean) {
+        let msg: M|null;
+        if (forced) {
+            msg = this.build(true);
+        } else {
+            msg = this.build(false);
+        }
+        this.commonBuilder.clear();
+        return msg;
+    }
+}
+
+export class TextMessageBuilder extends ClassifiedBuildableMessageBuilderBase<TextMessageBuf, TextMessage> {
     constructor(commonBuilder: MessageBuilder) {
         super(commonBuilder, TextMessageBuf);
     }
@@ -163,6 +192,11 @@ export class TextMessageBuilder extends ClassifiedMessageBuilderBase<TextMessage
             text: this.buf.text,
             quickReply: common.quickReply,
         };
+    }
+    public flush = (): TextMessage => {
+        const msg: TextMessage = this.build();
+        this.commonBuilder.clear();
+        return msg;
     }
 }
 
@@ -197,7 +231,7 @@ export class TemplateMessageBuilder extends ClassifiedMessageBuilderBase<Templat
     }
 }
 
-export class TemplateButtonsMessageBuilder extends ClassifiedMessageBuilderBase<TemplateButtonsMessageBuf> implements Buildable<TemplateMessage> {
+export class TemplateButtonsMessageBuilder extends ClassifiedBuildableMessageBuilderBase<TemplateButtonsMessageBuf, TemplateMessage> {
     private templateMessageBuilder: TemplateMessageBuilder;
     constructor(commonBuilder: MessageBuilder, templateMessageBuilder: TemplateMessageBuilder) {
         super(commonBuilder, TemplateButtonsMessageBuf);
@@ -266,7 +300,7 @@ export class TemplateButtonsMessageBuilder extends ClassifiedMessageBuilderBase<
     }
 }
 
-export class TemplateConfirmMessageBuilder extends ClassifiedMessageBuilderBase<TemplateConfirmMessageBuf> implements Buildable<TemplateMessage> {
+export class TemplateConfirmMessageBuilder extends ClassifiedBuildableMessageBuilderBase<TemplateConfirmMessageBuf, TemplateMessage> {
     private templateMessageBuilder: TemplateMessageBuilder;
     constructor(commonBuilder: MessageBuilder, templateMessageBuilder: TemplateMessageBuilder) {
         super(commonBuilder, TemplateConfirmMessageBuf);
@@ -310,7 +344,7 @@ export class TemplateConfirmMessageBuilder extends ClassifiedMessageBuilderBase<
     }
 }
 
-export class TemplateCarouselMessageBuilder extends ClassifiedMessageBuilderBase<TemplateCarouselMessageBuf> implements Buildable<TemplateMessage> {
+export class TemplateCarouselMessageBuilder extends ClassifiedBuildableMessageBuilderBase<TemplateCarouselMessageBuf, TemplateMessage> {
     private templateMessageBuilder: TemplateMessageBuilder;
     constructor(commonBuilder: MessageBuilder, templateMessageBuilder: TemplateMessageBuilder) {
         super(commonBuilder, TemplateCarouselMessageBuf);
@@ -359,7 +393,7 @@ export class TemplateCarouselMessageBuilder extends ClassifiedMessageBuilderBase
     }
 }
 
-export class TemplateImageCarouselMessageBuilder extends ClassifiedMessageBuilderBase<TemplateImageCarouselMessageBuf> implements Buildable<TemplateMessage> {
+export class TemplateImageCarouselMessageBuilder extends ClassifiedBuildableMessageBuilderBase<TemplateImageCarouselMessageBuf, TemplateMessage> {
     private templateMessageBuilder: TemplateMessageBuilder;
     constructor(commonBuilder: MessageBuilder, templateMessageBuilder: TemplateMessageBuilder) {
         super(commonBuilder, TemplateImageCarouselMessageBuf);
@@ -398,7 +432,7 @@ export class TemplateImageCarouselMessageBuilder extends ClassifiedMessageBuilde
     }
 }
 
-export class FlexMessageBuilder extends ClassifiedMessageBuilderBase<FlexMessageBuf> implements Buildable<FlexMessage> {
+export class FlexMessageBuilder extends ClassifiedBuildableMessageBuilderBase<FlexMessageBuf, FlexMessage> {
     constructor(commonBuilder: MessageBuilder) {
         super(commonBuilder, FlexMessageBuf);
     }

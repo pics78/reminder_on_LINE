@@ -20,7 +20,7 @@ export class SchedulerHandler {
                 targets.map(async (remind: ReminderRow) => {
                     await line.sendMessage(remind.usr, builder.type('text')
                         .text(remind.cnt)
-                        .build()
+                        .flush()
                     )
                     .then(() => query.sent(remind.id, remind.usr));
                 })

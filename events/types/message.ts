@@ -21,13 +21,13 @@ export class MessageEventHandler {
             return await line.replyMessage(event.replyToken, builder.type('text')
                 .text('登録処理を開始します。\nリマインド内容を送信してください。')
                 .addQuickReply(lineMsg.quickReplyItem('cancel'))
-                .build()
+                .flush()
             )
             .then(() => true);
         } else {
             return await line.replyMessage(event.replyToken, builder.type('text')
                 .text('リマインダ設定上限の12個に達しているため、登録できません。')
-                .build()
+                .flush()
             )
             .then(() => false);
         }
@@ -45,7 +45,7 @@ export class MessageEventHandler {
             .addAction(lineMsg.setDatetimeAction())
             .addQuickReply(lineMsg.quickReplyItem('back'))
             .addQuickReply(lineMsg.quickReplyItem('cancel'))
-            .build(true)
+            .flush(true)
         )
         .then(() => true);
     }
@@ -59,7 +59,7 @@ export class MessageEventHandler {
                 .altText('内容編集確認')
                 .contents(lineMsg.bubbleToConfirmContent(oldContent, newContent))
                 .addQuickReply(lineMsg.quickReplyItem('cancel'))
-                .build(true)
+                .flush(true)
             )
             .then(() => true);
     }
@@ -79,13 +79,13 @@ export class MessageEventHandler {
                     type: 'carousel',
                     contents: bubbles,
                 })
-                .build(true)
+                .flush(true)
             )
             .then(() => true);
         } else {
             return await line.replyMessage(event.replyToken, builder.type('text')
                 .text('現在、登録されているリマインドはありません。')
-                .build()
+                .flush()
             )
             .then(() => true);
         }
