@@ -154,8 +154,10 @@ class ClassifiedMessageBuilderBase<T extends MessageBufInterface> {
 }
 
 abstract class ClassifiedBuildableMessageBuilderBase<T extends MessageBufInterface, M extends Message> extends ClassifiedMessageBuilderBase<T> implements Buildable<M> {
+    private Buf: (new () => T);
     constructor(commonBuilder: MessageBuilder, Buf: (new () => T)) {
         super(commonBuilder, Buf);
+        this.Buf = Buf;
     }
 
     abstract build(forced?: false): M|null;
@@ -172,6 +174,7 @@ abstract class ClassifiedBuildableMessageBuilderBase<T extends MessageBufInterfa
             msg = this.build(false);
         }
         this.commonBuilder.clear();
+        this.buf = new this.Buf();
         return msg;
     }
 }

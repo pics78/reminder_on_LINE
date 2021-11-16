@@ -115,6 +115,9 @@ export class EventHandler {
                         } else if (event.postback.data === 'action=retry_content') {
                             PostbackEventHandler.retryContent(event)
                                 .then(() => statusMgr.setStatus(event.source.userId, StatusDef.modifyContent));
+                        } else if (event.postback.data === 'action=cancel') {
+                            PostbackEventHandler.cancelReturned(event)
+                                .then(() => statusMgr.reset(event.source.userId));
                         }
                     }
                     break;
@@ -126,6 +129,9 @@ export class EventHandler {
                         } else if (event.postback.data === 'action=retry_datetime') {
                             PostbackEventHandler.retryDatetime(event)
                                 .then(() => statusMgr.setStatus(event.source.userId, StatusDef.modifyDatetime));
+                        } else if (event.postback.data === 'action=cancel') {
+                            PostbackEventHandler.cancelReturned(event)
+                                .then(() => statusMgr.reset(event.source.userId));
                         }
                     }
                     break;
