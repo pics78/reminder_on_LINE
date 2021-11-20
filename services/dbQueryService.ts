@@ -20,7 +20,7 @@ export class Query {
 
     public selectAll = async (usr: string): Promise<ReminderRow[]> => {
         return await postgresql.run(
-            `select * from ${table} where line_user = $1 and ${column.snt} = false`,
+            `select * from ${table} where line_user = $1 and ${column.snt} = false order by ${column.cdt} ASC`,
             [usr]
         )
         .then(qr => {
@@ -39,7 +39,7 @@ export class Query {
 
     public selectRemindTargets = async (dt: string): Promise<ReminderRow[]> => {
         return await postgresql.run(
-            `select * from ${table} where ${column.rdt} = $1 and ${column.snt} = false order by ${column.usr}`,
+            `select * from ${table} where ${column.rdt} = $1 and ${column.snt} = false order by ${column.usr}, ${column.cdt} ASC`,
             [dt])
         .then(qr => {
             let result: ReminderRow[] = [];
