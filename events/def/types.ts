@@ -21,6 +21,9 @@ export type PostbackEventForReminder = {
 export type WebhookEventForReminder =
     MessageEventForReminder | PostbackEventForReminder;
 
+export const isEventForReminder = (event: any):
+    event is WebhookEventForReminder => event.type === 'message' || event.type === 'postback';
+
 export const isMessageEventForReminder = (event: WebhookEventForReminder):
     event is MessageEventForReminder => event.type === 'message';
 

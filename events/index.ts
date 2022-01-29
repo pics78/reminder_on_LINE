@@ -143,7 +143,7 @@ export class EventHandler {
                     )
                     .then(() => statusMgr.reset(event.source.userId));
                     
-                    await line.sendToAdmin( `[ERROR]: ${event.source.userId}, ステータスエラー`);
+                    await line.sendToAdmin( `[ERROR]: ${event.source.userId}, ステータスエラー(status: ${status})`);
             }
         } catch (err: unknown) {
             const userId: string = event.source.userId;

@@ -1,6 +1,6 @@
 import { Express, Request, Response } from 'express';
 import { lineMiddleware } from './connectors/lineConnector';
-import { WebhookEventForReminder } from './events/def/types';
+import { isEventForReminder } from './events/def/types';
 import { EventHandler } from './events'
 
 const cron = require('node-cron');
@@ -13,12 +13,16 @@ app.get('/wakeUp', (_req: Request, res: Response) => {
 });
 
 app.post('/webhook', lineMiddleware(), async (req: Request, res: Response) => {
-    const events: WebhookEventForReminder[] = req.body.events;
+    const events: any = req.body.events;
 
     await Promise.all(
-        events.map(async (event: WebhookEventForReminder) => {
+        events.map(async (event: any) => {
             try {
-                await EventHandler.handle(event);
+                if (isEventForReminder(event)) {
+                    // 必要なイベントのみ処理する
+                    // event: WebhookEventForReminder
+                    await EventHandler.handle(event);
+                }
             } catch (err: unknown) {
                 throw err;
             }
